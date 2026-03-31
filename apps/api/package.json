@@ -1,5 +1,8 @@
 {
   "name": "@novel-creator/api",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "dependencies": {
+    "fastify": "^5.8.4"
+  }
 }

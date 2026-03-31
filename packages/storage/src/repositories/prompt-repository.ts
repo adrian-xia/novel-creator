@@ -1,4 +1,4 @@
-import type { PromptConfig } from '../../../domain/src/prompt-config';
+import type { PromptConfig } from '@novel-creator/domain';
 import { prisma } from '../client';
 
 export class PromptRepository {

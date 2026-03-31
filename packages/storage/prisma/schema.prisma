@@ -33,7 +33,7 @@ model PromptConfig {
   updatedAt       DateTime @updatedAt
 }
 
-model ProviderKey {
+model ProviderCapacity {
   id                    String   @id @default(uuid())
   provider              String
   model                 String

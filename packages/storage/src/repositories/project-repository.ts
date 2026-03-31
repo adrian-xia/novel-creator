@@ -1,4 +1,4 @@
-import type { NovelProject } from '../../../domain/src/novel-project';
+import type { NovelProject } from '@novel-creator/domain';
 import { prisma } from '../client';
 
 export class ProjectRepository {

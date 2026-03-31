@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createNovelProject } from '../../../../packages/domain/src/novel-project';
+import { createNovelProject } from '../../../../packages/domain/src';
 
 export function registerProjectRoutes(app: FastifyInstance) {
   app.post('/projects', async (request, reply) => {

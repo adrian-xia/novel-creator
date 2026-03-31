@@ -18,5 +18,17 @@ describe('projects route', () => {
     });
 
     expect(response.statusCode).toBe(201);
+
+    const body = response.json();
+
+    expect(body).toMatchObject({
+      title: '寒江伏魔录',
+      genre: '仙侠',
+      premise: '小城捕快卷入仙门秘案',
+      targetChapterCount: 180,
+      chaptersPerDay: 2,
+      status: 'draft'
+    });
+    expect(body.id).toEqual(expect.any(String));
   });
 });

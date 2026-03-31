@@ -9,10 +9,13 @@ export interface AcquireRequest {
 
 export interface CapacityLease {
   keyId: string;
+  leaseId: string;
 }
 
 export class CapacityService {
   private readonly registry: ProviderRegistry;
+  private readonly activeLeases = new Map<string, string>();
+  private nextLeaseId = 1;
 
   constructor(keys: CapacityKey[], registry: ProviderRegistry = new ProviderRegistry(keys)) {
     this.registry = registry;
@@ -26,16 +29,20 @@ export class CapacityService {
     }
 
     candidate.currentLeases += 1;
-    return { keyId: candidate.id };
+    const leaseId = `lease-${this.nextLeaseId++}`;
+    this.activeLeases.set(leaseId, candidate.id);
+    return { keyId: candidate.id, leaseId };
   }
 
   async release(lease: CapacityLease): Promise<void> {
+    const leasedKeyId = this.activeLeases.get(lease.leaseId);
     const key = this.registry.findById(lease.keyId);
 
-    if (!key || key.currentLeases < 1) {
+    if (!key || key.currentLeases < 1 || leasedKeyId !== lease.keyId) {
       throw new Error(`Lease not found for ${lease.keyId}`);
     }
 
+    this.activeLeases.delete(lease.leaseId);
     key.currentLeases -= 1;
   }
 }

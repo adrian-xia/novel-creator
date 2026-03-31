@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@novel-creator/domain": "workspace:*",
-    "@prisma/client": "*"
+    "@prisma/client": "6.19.2"
   },
   "devDependencies": {
-    "prisma": "*"
+    "prisma": "6.19.2"
   }
 }

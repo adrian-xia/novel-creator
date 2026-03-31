@@ -1,6 +1,9 @@
+import { createProjectFlow, enqueueWorkflow } from '../../../../packages/workflows/src';
+
 export async function runWorkflowJob(jobName: string) {
-  return {
-    jobName,
-    status: 'queued' as const
-  };
+  const flow = jobName === 'create-project-flow'
+    ? createProjectFlow()
+    : { name: jobName, steps: [] };
+
+  return enqueueWorkflow(flow);
 }

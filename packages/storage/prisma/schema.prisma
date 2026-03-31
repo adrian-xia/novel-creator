@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model NovelProject {
+  id                 String   @id @default(uuid())
+  title              String
+  genre              String
+  premise            String
+  targetChapterCount Int
+  chaptersPerDay     Int
+  status             String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model PromptConfig {
+  id              String   @id @default(uuid())
+  agentName       String
+  version         Int
+  systemPrompt    String
+  taskTemplate    String
+  outputSchema    Json
+  reviewRubric    String?
+  enabled         Boolean  @default(true)
+  lastTestedModel String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ProviderKey {
+  id                    String   @id @default(uuid())
+  provider              String
+  model                 String
+  keyName               String
+  secretRef             String
+  maxConcurrentRequests Int
+  requestsPerMinute     Int
+  tokensPerMinute       Int
+  dailyBudget           Decimal  @db.Decimal(10, 2)
+  enabled               Boolean  @default(true)
+  priority              Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}

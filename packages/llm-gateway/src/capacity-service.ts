@@ -19,7 +19,7 @@ export class CapacityService {
   }
 
   async acquire(request: AcquireRequest): Promise<CapacityLease> {
-    const candidate = this.registry.selectAvailable(request);
+    const candidate = this.registry.selectAvailable(request.provider, request.model);
 
     if (!candidate) {
       throw new Error(`No capacity for ${request.provider}/${request.model}`);

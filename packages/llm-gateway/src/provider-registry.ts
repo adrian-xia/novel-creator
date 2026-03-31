@@ -1,5 +1,4 @@
 import type { ProviderCapacity } from '../../domain/src/provider-capacity';
-import type { AcquireRequest } from './capacity-service';
 
 export type CapacityKey = ProviderCapacity & {
   currentLeases: number;
@@ -20,8 +19,8 @@ export class ProviderRegistry {
     return this.keys.find((key) => key.id === keyId);
   }
 
-  selectAvailable(request: AcquireRequest): CapacityKey | undefined {
-    return this.find(request.provider, request.model)
+  selectAvailable(provider: string, model: string): CapacityKey | undefined {
+    return this.find(provider, model)
       .filter((key) => key.enabled)
       .filter((key) => key.currentLeases < key.maxConcurrentRequests)
       .sort((left, right) => right.priority - left.priority)[0];

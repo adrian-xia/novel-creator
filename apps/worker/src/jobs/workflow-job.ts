@@ -1,15 +1,18 @@
 import {
   createProjectFlow,
-  enqueueWorkflow,
   decisionSessionFlow,
   generateChapterFlow,
   generateOutlineFlow,
   generateVolumeFlow,
   publishChapterFlow,
-  reviewRewriteFlow
+  reviewRewriteFlow,
+  runInstrumentedWorkflow
 } from '../../../../packages/workflows/src';
 
-export async function runWorkflowJob(jobName: string) {
+export async function runWorkflowJob(
+  jobName: string,
+  payload: { projectId?: string; chapterNumber?: number } = {}
+) {
   const flowMap = {
     'create-project-flow': createProjectFlow(),
     'generate-outline-flow': generateOutlineFlow(),
@@ -22,5 +25,11 @@ export async function runWorkflowJob(jobName: string) {
 
   const flow = flowMap[jobName as keyof typeof flowMap] ?? { name: jobName, steps: [] };
 
-  return enqueueWorkflow(flow);
+  return runInstrumentedWorkflow({
+    flow,
+    payload: {
+      projectId: payload.projectId ?? 'system',
+      chapterNumber: payload.chapterNumber ?? null
+    }
+  });
 }

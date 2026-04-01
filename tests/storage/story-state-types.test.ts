@@ -7,14 +7,15 @@ import type {
   ReviewOutcome,
   StoryState
 } from '../../packages/domain/src';
+import type { JsonObject, JsonValue } from '../../packages/domain/src/prompt-config';
 
 describe('story-state domain contracts', () => {
   it('exposes the story production types', () => {
     expectTypeOf<StoryState>().toMatchTypeOf<{
       projectId: string;
       storyBible: string | null;
-      outline: unknown | null;
-      volumePlans: unknown[];
+      outline: JsonValue | null;
+      volumePlans: JsonValue[];
       confirmedFacts: string[];
       openForeshadowing: string[];
       chapterSummaries: Array<{ chapterNumber: number; summary: string }>;
@@ -48,7 +49,7 @@ describe('story-state domain contracts', () => {
       version: number;
       content: string;
       summary: string | null;
-      metadata: Record<string, unknown>;
+      metadata: JsonObject;
     }>();
 
     expectTypeOf<ReviewOutcome>().toMatchTypeOf<{
@@ -70,9 +71,9 @@ describe('story-state domain contracts', () => {
       model: string;
       apiKeyId: string;
       leaseId: string;
-      inputSnapshot: Record<string, unknown>;
+      inputSnapshot: JsonObject;
       rawOutput: string;
-      parsedOutput: Record<string, unknown> | null;
+      parsedOutput: JsonValue | null;
       status: 'succeeded' | 'failed';
       tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
       errorMessage: string | null;

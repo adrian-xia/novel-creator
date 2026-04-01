@@ -1,3 +1,5 @@
+import type { JsonObject, JsonValue } from './prompt-config';
+
 export type ChapterState =
   | 'pending'
   | 'planned'
@@ -11,8 +13,8 @@ export type ChapterState =
 export interface StoryState {
   projectId: string;
   storyBible: string | null;
-  outline: Record<string, unknown> | null;
-  volumePlans: Array<Record<string, unknown>>;
+  outline: JsonValue | null;
+  volumePlans: JsonValue[];
   confirmedFacts: string[];
   openForeshadowing: string[];
   chapterSummaries: Array<{ chapterNumber: number; summary: string }>;
@@ -38,7 +40,7 @@ export interface ChapterDraft {
   version: number;
   content: string;
   summary: string | null;
-  metadata: Record<string, unknown>;
+  metadata: JsonObject;
 }
 
 export interface ReviewIssue {
@@ -66,9 +68,9 @@ export interface AgentRun {
   model: string;
   apiKeyId: string;
   leaseId: string;
-  inputSnapshot: Record<string, unknown>;
+  inputSnapshot: JsonObject;
   rawOutput: string;
-  parsedOutput: Record<string, unknown> | null;
+  parsedOutput: JsonValue | null;
   status: 'succeeded' | 'failed';
   tokenUsage: {
     promptTokens: number;

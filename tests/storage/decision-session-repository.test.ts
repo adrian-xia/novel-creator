@@ -15,10 +15,32 @@ const prisma = vi.hoisted(() => ({
   }
 }));
 
+let sessionState: {
+  id: string;
+  projectId: string;
+  chapterNumber: number;
+  status: string;
+  packet: Record<string, unknown>;
+  updatedAt: Date;
+  messages: Array<{ sessionId: string; role: string; content: string }>;
+  resolution: null | { sessionId: string; resolutionType: string };
+};
+
 vi.mock('../../packages/storage/src/client', () => ({ prisma }));
 
 describe('DecisionSessionRepository', () => {
   beforeEach(() => {
+    sessionState = {
+      id: 'decision-session-1',
+      projectId: 'project-1',
+      chapterNumber: 8,
+      status: 'open',
+      packet: { summary: 'blocked twist' },
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      messages: [],
+      resolution: null
+    };
+
     prisma.$transaction.mockReset();
     prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => Promise<unknown>) =>
       callback(prisma)
@@ -38,32 +60,46 @@ describe('DecisionSessionRepository', () => {
   });
 
   it('creates a session, appends messages, and saves a resolution', async () => {
-    prisma.decisionSessionRecord.create.mockResolvedValue({
-      id: 'decision-session-1',
-      projectId: 'project-1',
-      chapterNumber: 8,
-      status: 'open',
-      packet: { summary: 'blocked twist' }
-    });
-    prisma.decisionMessageRecord.create.mockResolvedValue({ id: 'message-1' });
-    prisma.decisionResolutionRecord.upsert.mockResolvedValue({ sessionId: 'decision-session-1' });
-    prisma.decisionSessionRecord.update.mockResolvedValue({
-      id: 'decision-session-1',
-      status: 'resolved'
-    });
-    prisma.decisionSessionRecord.findUnique
-      .mockResolvedValueOnce({
-        status: 'open'
-      })
-      .mockResolvedValue({
+    prisma.decisionSessionRecord.create.mockImplementation(async ({ data }) => {
+      sessionState = {
+        ...sessionState,
+        ...data,
         id: 'decision-session-1',
-        status: 'resolved',
-        messages: [{ id: 'message-1', role: 'human', content: 'Give me a safer alternative' }],
-        resolution: {
-          sessionId: 'decision-session-1',
-          resolutionType: 'accept_alternative'
-        }
-      });
+        updatedAt: new Date('2026-01-01T00:00:00.000Z')
+      };
+
+      return sessionState;
+    });
+    prisma.decisionResolutionRecord.upsert.mockImplementation(async ({ create }) => {
+      sessionState.resolution = {
+        sessionId: create.sessionId,
+        resolutionType: create.resolutionType
+      };
+      return create;
+    });
+    prisma.decisionSessionRecord.update.mockImplementation(async ({ data }) => {
+      sessionState = {
+        ...sessionState,
+        ...data
+      };
+
+      return sessionState;
+    });
+    prisma.decisionSessionRecord.findUnique.mockImplementation(async () => ({
+      ...sessionState,
+      messages: [...sessionState.messages],
+      resolution: sessionState.resolution
+    }));
+
+    let releaseMessageCreate!: () => void;
+    const messageCreateGate = new Promise<void>((resolve) => {
+      releaseMessageCreate = resolve;
+    });
+    prisma.decisionMessageRecord.create.mockImplementation(async ({ data }) => {
+      await messageCreateGate;
+      sessionState.messages = [...sessionState.messages, data];
+      return { id: 'message-1', ...data };
+    });
 
     const { DecisionSessionRepository } = await import(
       '../../packages/storage/src/repositories/decision-session-repository'
@@ -76,15 +112,10 @@ describe('DecisionSessionRepository', () => {
       packet: { summary: 'blocked twist' }
     });
 
-    await repository.appendMessage({
+    const appendPromise = repository.appendMessage({
       sessionId: session.id,
       role: 'human',
       content: 'Give me a safer alternative'
-    });
-
-    expect(prisma.decisionSessionRecord.update).toHaveBeenCalledWith({
-      where: { id: session.id },
-      data: { status: 'open' }
     });
 
     await repository.saveResolution({
@@ -97,9 +128,23 @@ describe('DecisionSessionRepository', () => {
       nextAction: 'replan_chapter'
     });
 
+    releaseMessageCreate();
+    await appendPromise;
+
+    expect(prisma.decisionSessionRecord.findUnique).not.toHaveBeenCalled();
+    expect(prisma.decisionSessionRecord.update).toHaveBeenCalledWith({
+      where: { id: session.id },
+      data: { updatedAt: expect.any(Date) }
+    });
+    expect(prisma.decisionSessionRecord.update).toHaveBeenCalledWith({
+      where: { id: session.id },
+      data: { status: 'resolved' }
+    });
+
     const detail = await repository.getSessionDetail(session.id);
     expect(detail?.messages).toHaveLength(1);
     expect(detail?.resolution?.resolutionType).toBe('accept_alternative');
     expect(detail?.status).toBe('resolved');
+    expect(sessionState.status).toBe('resolved');
   });
 });

@@ -19,15 +19,6 @@ export class DecisionSessionRepository {
 
   async appendMessage(message: DecisionMessage) {
     return prisma.$transaction(async (tx) => {
-      const session = await tx.decisionSessionRecord.findUnique({
-        where: { id: message.sessionId },
-        select: { status: true }
-      });
-
-      if (!session) {
-        throw new Error(`Decision session not found: ${message.sessionId}`);
-      }
-
       const appendedMessage = await tx.decisionMessageRecord.create({
         data: {
           sessionId: message.sessionId,
@@ -40,7 +31,7 @@ export class DecisionSessionRepository {
       await tx.decisionSessionRecord.update({
         where: { id: message.sessionId },
         data: {
-          status: session.status
+          updatedAt: new Date()
         }
       });
 

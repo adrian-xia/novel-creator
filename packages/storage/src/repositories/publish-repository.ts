@@ -90,10 +90,7 @@ export class PublishRepository {
               status: 'pending',
               payloadSnapshot: input.payloadSnapshot
             },
-            update: {
-              status: 'pending',
-              payloadSnapshot: input.payloadSnapshot
-            }
+            update: {}
           })
         ),
         ...exportTargets.map((target) =>
@@ -114,10 +111,7 @@ export class PublishRepository {
               status: 'pending',
               payloadSnapshot: input.payloadSnapshot
             },
-            update: {
-              status: 'pending',
-              payloadSnapshot: input.payloadSnapshot
-            }
+            update: {}
           })
         )
       ]);

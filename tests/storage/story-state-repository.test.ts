@@ -31,10 +31,19 @@ const prisma = vi.hoisted(() => ({
   }
 }));
 
+vi.mock('@prisma/client', () => ({
+  Prisma: {
+    TransactionIsolationLevel: {
+      Serializable: 'Serializable'
+    }
+  }
+}));
+
 vi.mock('../../packages/storage/src/client', () => ({ prisma }));
 
 describe('StoryStateRepository', () => {
   beforeEach(() => {
+    vi.resetModules();
     prisma.$transaction.mockReset();
     prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => Promise<unknown>) =>
       callback(prisma)

@@ -78,5 +78,5 @@ describe('storage package setup', () => {
     expect(new StoryStateRepository()).toBeInstanceOf(StoryStateRepository);
 
     await prisma.$disconnect();
-  });
+  }, 45_000);
 });

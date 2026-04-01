@@ -22,3 +22,11 @@
 - `POST /projects/:projectId/flows/next-chapter` queues the next chapter pipeline
 - project detail UI shows outline, volumes, chapters, and recent agent runs
 - review/rewrite logic stops after two automatic rewrite attempts
+
+## Phase 3 Expected Behavior
+
+- blocked review outcomes can enter a decision session flow
+- projects expose publish-profile APIs for automatic publish targets and manual export targets
+- manual export tasks support ready and confirm transitions
+- worker records workflow instrumentation through workflow-run execution
+- internal control panel includes decision queue, publish center, and workflow run pages

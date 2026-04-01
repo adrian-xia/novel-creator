@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import type {
   AgentRun,
   ChapterDraft,
@@ -7,6 +6,8 @@ import type {
   ReviewOutcome
 } from '@novel-creator/domain';
 import { prisma } from '../client';
+
+const SERIALIZABLE_ISOLATION_LEVEL = 'Serializable' as const;
 
 export class StoryStateRepository {
   async saveOutline(input: {
@@ -207,7 +208,7 @@ export class StoryStateRepository {
         }
       });
     }, {
-      isolationLevel: Prisma.TransactionIsolationLevel.Serializable
+      isolationLevel: SERIALIZABLE_ISOLATION_LEVEL
     });
   }
 }

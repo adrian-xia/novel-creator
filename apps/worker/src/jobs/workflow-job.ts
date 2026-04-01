@@ -5,9 +5,9 @@ import {
   generateOutlineFlow,
   generateVolumeFlow,
   publishChapterFlow,
-  reviewRewriteFlow,
-  runInstrumentedWorkflow
+  reviewRewriteFlow
 } from '../../../../packages/workflows/src';
+import { runInstrumentedWorkflow } from '../../../../packages/workflows/src/workflow-runner';
 
 export async function runWorkflowJob(
   jobName: string,

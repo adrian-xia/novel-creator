@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import storagePackage from '../../packages/storage/package.json';
 
 const testDir = dirname(fileURLToPath(import.meta.url));
@@ -20,6 +21,12 @@ describe('storage package setup', () => {
     expect(storagePackage.scripts?.postinstall).toBe('prisma generate');
   });
 
+  it('declares unique draft versions in the Prisma schema', () => {
+    const schema = readFileSync(resolve(repoRoot, 'packages/storage/prisma/schema.prisma'), 'utf8');
+
+    expect(schema).toContain('@@unique([projectId, chapterNumber, version])');
+  });
+
   it('generates a Prisma client and imports the real storage scaffold', async () => {
     execFileSync('node', ['tests/storage/verify-storage-prisma-client.mjs'], {
       cwd: repoRoot,
@@ -30,6 +37,8 @@ describe('storage package setup', () => {
     expect(typeof createPrismaClient).toBe('function');
     expect(prisma.novelProject).toBeDefined();
     expect(prisma.promptConfig).toBeDefined();
+    expect(prisma.chapterStateRecord).toBeDefined();
+    expect(prisma.chapterDraftRecord).toBeDefined();
 
     const { ProjectRepository } = await importFreshModule(
       'packages/storage/src/repositories/project-repository.ts'
@@ -37,9 +46,13 @@ describe('storage package setup', () => {
     const { PromptRepository } = await importFreshModule(
       'packages/storage/src/repositories/prompt-repository.ts'
     );
+    const { StoryStateRepository } = await importFreshModule(
+      'packages/storage/src/repositories/story-state-repository.ts'
+    );
 
     expect(new ProjectRepository()).toBeInstanceOf(ProjectRepository);
     expect(new PromptRepository()).toBeInstanceOf(PromptRepository);
+    expect(new StoryStateRepository()).toBeInstanceOf(StoryStateRepository);
 
     await prisma.$disconnect();
   });

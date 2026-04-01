@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const prisma = vi.hoisted(() => ({
   $transaction: vi.fn(),
+  chapterStateRecord: {
+    upsert: vi.fn()
+  },
   storyState: {
     upsert: vi.fn(),
     findUnique: vi.fn(),
@@ -71,7 +74,7 @@ describe('StoryStateRepository', () => {
         payload: { title: '总纲', ending: '收束' }
       }
     });
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function));
     expect(prisma.storyState.upsert).toHaveBeenCalled();
   });
 
@@ -89,7 +92,7 @@ describe('StoryStateRepository', () => {
       plans: [{ name: '第一卷' }, { name: '第二卷' }]
     });
 
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function));
     expect(prisma.volumePlanRecord.createMany).toHaveBeenCalledWith({
       data: [
         { projectId: 'project-1', volumeNumber: 1, payload: { name: '第一卷' } },
@@ -97,6 +100,42 @@ describe('StoryStateRepository', () => {
       ]
     });
     expect(prisma.storyState.upsert).toHaveBeenCalled();
+  });
+
+  it('upserts persisted chapter state by project and chapter number', async () => {
+    prisma.chapterStateRecord.upsert.mockResolvedValue({
+      projectId: 'project-1',
+      chapterNumber: 7,
+      status: 'drafted'
+    });
+
+    const { StoryStateRepository } = await import(
+      '../../packages/storage/src/repositories/story-state-repository'
+    );
+    const repository = new StoryStateRepository();
+
+    await repository.saveChapterState({
+      projectId: 'project-1',
+      chapterNumber: 7,
+      status: 'drafted'
+    });
+
+    expect(prisma.chapterStateRecord.upsert).toHaveBeenCalledWith({
+      where: {
+        projectId_chapterNumber: {
+          projectId: 'project-1',
+          chapterNumber: 7
+        }
+      },
+      create: {
+        projectId: 'project-1',
+        chapterNumber: 7,
+        status: 'drafted'
+      },
+      update: {
+        status: 'drafted'
+      }
+    });
   });
 
   it('creates chapter summaries inside a transaction when story state is missing', async () => {
@@ -115,7 +154,10 @@ describe('StoryStateRepository', () => {
       nextChapterNumber: 3
     });
 
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ isolationLevel: expect.anything() })
+    );
     expect(prisma.storyState.create).toHaveBeenCalledWith({
       data: {
         projectId: 'project-1',
@@ -150,7 +192,10 @@ describe('StoryStateRepository', () => {
       nextChapterNumber: 3
     });
 
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ isolationLevel: expect.anything() })
+    );
     expect(prisma.storyState.update).toHaveBeenCalledWith({
       where: { projectId: 'project-1' },
       data: expect.objectContaining({

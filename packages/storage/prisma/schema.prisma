@@ -94,6 +94,19 @@ model ChapterDraftRecord {
   summary       String?
   metadata      Json
   createdAt     DateTime @default(now())
+
+  @@unique([projectId, chapterNumber, version])
+}
+
+model ChapterStateRecord {
+  id            String   @id @default(uuid())
+  projectId     String
+  chapterNumber Int
+  status        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([projectId, chapterNumber])
 }
 
 model ReviewOutcomeRecord {

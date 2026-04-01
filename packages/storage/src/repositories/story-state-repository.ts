@@ -1,4 +1,11 @@
-import type { AgentRun, ChapterDraft, ChapterPlan, ReviewOutcome } from '@novel-creator/domain';
+import { Prisma } from '@prisma/client';
+import type {
+  AgentRun,
+  ChapterDraft,
+  ChapterPlan,
+  ChapterState,
+  ReviewOutcome
+} from '@novel-creator/domain';
 import { prisma } from '../client';
 
 export class StoryStateRepository {
@@ -88,6 +95,29 @@ export class StoryStateRepository {
     });
   }
 
+  async saveChapterState(input: {
+    projectId: string;
+    chapterNumber: number;
+    status: ChapterState;
+  }) {
+    return prisma.chapterStateRecord.upsert({
+      where: {
+        projectId_chapterNumber: {
+          projectId: input.projectId,
+          chapterNumber: input.chapterNumber
+        }
+      },
+      create: {
+        projectId: input.projectId,
+        chapterNumber: input.chapterNumber,
+        status: input.status
+      },
+      update: {
+        status: input.status
+      }
+    });
+  }
+
   async saveReviewOutcome(outcome: ReviewOutcome) {
     return prisma.reviewOutcomeRecord.create({
       data: {
@@ -156,6 +186,8 @@ export class StoryStateRepository {
           currentPosition
         }
       });
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable
     });
   }
 }

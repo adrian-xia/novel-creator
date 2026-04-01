@@ -4,6 +4,7 @@ import type {
   ChapterDraft,
   ChapterPlan,
   ChapterState,
+  ReviewIssue,
   ReviewOutcome,
   StoryState
 } from '../../packages/domain/src';
@@ -11,7 +12,7 @@ import type { JsonObject, JsonValue } from '../../packages/domain/src/prompt-con
 
 describe('story-state domain contracts', () => {
   it('exposes the story production types', () => {
-    expectTypeOf<StoryState>().toMatchTypeOf<{
+    expectTypeOf<StoryState>().toEqualTypeOf<{
       projectId: string;
       storyBible: string | null;
       outline: JsonValue | null;
@@ -33,7 +34,7 @@ describe('story-state domain contracts', () => {
       | 'failed'
     >();
 
-    expectTypeOf<ChapterPlan>().toMatchTypeOf<{
+    expectTypeOf<ChapterPlan>().toEqualTypeOf<{
       projectId: string;
       chapterNumber: number;
       title: string;
@@ -43,7 +44,7 @@ describe('story-state domain contracts', () => {
       hardConstraints: string[];
     }>();
 
-    expectTypeOf<ChapterDraft>().toMatchTypeOf<{
+    expectTypeOf<ChapterDraft>().toEqualTypeOf<{
       projectId: string;
       chapterNumber: number;
       version: number;
@@ -52,17 +53,23 @@ describe('story-state domain contracts', () => {
       metadata: JsonObject;
     }>();
 
-    expectTypeOf<ReviewOutcome>().toMatchTypeOf<{
+    expectTypeOf<ReviewIssue>().toEqualTypeOf<{
+      code: string;
+      message: string;
+      severity: 'low' | 'medium' | 'high';
+    }>();
+
+    expectTypeOf<ReviewOutcome>().toEqualTypeOf<{
       projectId: string;
       chapterNumber: number;
       decision: 'approve' | 'rewrite' | 'blocked_for_manual_decision';
-      issues: Array<{ code: string; message: string; severity: 'low' | 'medium' | 'high' }>;
+      issues: ReviewIssue[];
       rewriteInstructions: string[];
       canAutoRewrite: boolean;
       triggeredManualDecision: boolean;
     }>();
 
-    expectTypeOf<AgentRun>().toMatchTypeOf<{
+    expectTypeOf<AgentRun>().toEqualTypeOf<{
       projectId: string;
       chapterNumber: number | null;
       agentType: string;

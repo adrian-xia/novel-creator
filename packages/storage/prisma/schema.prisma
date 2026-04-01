@@ -25,6 +25,11 @@ model NovelProject {
   chapterStateRecords ChapterStateRecord[]
   reviewOutcomeRecords ReviewOutcomeRecord[]
   agentRunRecords    AgentRunRecord[]
+  publishProfile     PublishProfileRecord?
+  decisionSessions   DecisionSessionRecord[]
+  publishTaskRecords PublishTaskRecord[]
+  exportArtifactRecords ExportArtifactRecord[]
+  workflowRunRecords WorkflowRunRecord[]
 }
 
 model PromptConfig {
@@ -150,4 +155,103 @@ model AgentRunRecord {
   errorMessage        String?
   createdAt           DateTime @default(now())
   project             NovelProject @relation(fields: [projectId], references: [id])
+}
+
+model PublishProfileRecord {
+  projectId            String   @id
+  publishEnabled       Boolean  @default(false)
+  autoPublishTargets   Json     @default("[]")
+  manualExportTargets  Json     @default("[]")
+  defaultExportFormat  String
+  effectiveFromChapter Int?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  project              NovelProject @relation(fields: [projectId], references: [id])
+}
+
+model DecisionSessionRecord {
+  id            String   @id @default(uuid())
+  projectId     String
+  chapterNumber Int
+  status        String
+  packet        Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  project       NovelProject @relation(fields: [projectId], references: [id])
+  messages      DecisionMessageRecord[]
+  resolution    DecisionResolutionRecord?
+}
+
+model DecisionMessageRecord {
+  id         String   @id @default(uuid())
+  sessionId  String
+  role       String
+  content    String
+  createdAt  DateTime @default(now())
+  session    DecisionSessionRecord @relation(fields: [sessionId], references: [id])
+}
+
+model DecisionResolutionRecord {
+  sessionId              String   @id
+  resolutionType         String
+  decisionSummary        String
+  storyFactsToApply      Json
+  chapterPlanAdjustments Json
+  volumeImpact           String?
+  nextAction             String
+  createdAt              DateTime @default(now())
+  session                DecisionSessionRecord @relation(fields: [sessionId], references: [id])
+}
+
+model PublishTaskRecord {
+  id              String   @id @default(uuid())
+  projectId       String
+  chapterNumber   Int
+  targetPlatform  String
+  mode            String
+  status          String
+  payloadSnapshot Json
+  artifactId      String?
+  attemptCount    Int      @default(0)
+  lastError       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  project         NovelProject @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, chapterNumber])
+}
+
+model ExportArtifactRecord {
+  id             String   @id @default(uuid())
+  projectId      String
+  chapterNumber  Int
+  targetPlatform String
+  format         String
+  content        String
+  createdAt      DateTime @default(now())
+  project        NovelProject @relation(fields: [projectId], references: [id])
+}
+
+model WorkflowRunRecord {
+  id            String   @id @default(uuid())
+  flowName      String
+  projectId     String
+  chapterNumber Int?
+  status        String
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  project       NovelProject @relation(fields: [projectId], references: [id])
+  stepRuns      StepRunRecord[]
+}
+
+model StepRunRecord {
+  id            String   @id @default(uuid())
+  workflowRunId String
+  stepName      String
+  status        String
+  errorMessage  String?
+  startedAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  workflowRun   WorkflowRunRecord @relation(fields: [workflowRunId], references: [id])
 }

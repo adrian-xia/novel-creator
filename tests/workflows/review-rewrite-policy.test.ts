@@ -27,4 +27,17 @@ describe('decideReviewNextState', () => {
       shouldRewrite: false
     });
   });
+
+  it('blocks a direct manual-block decision', () => {
+    expect(
+      decideReviewNextState({
+        decision: 'blocked_for_manual_decision',
+        rewriteCount: 0,
+        triggeredManualDecision: false
+      })
+    ).toEqual({
+      chapterState: 'blocked_for_manual_decision',
+      shouldRewrite: false
+    });
+  });
 });

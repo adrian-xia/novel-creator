@@ -138,6 +138,42 @@ describe('StoryStateRepository', () => {
     });
   });
 
+  it('persists workflow-decided chapter state through the chapter state helper', async () => {
+    prisma.chapterStateRecord.upsert.mockResolvedValue({
+      projectId: 'project-1',
+      chapterNumber: 7,
+      status: 'blocked_for_manual_decision'
+    });
+
+    const { StoryStateRepository } = await import(
+      '../../packages/storage/src/repositories/story-state-repository'
+    );
+    const repository = new StoryStateRepository();
+
+    await repository.saveWorkflowDecidedChapterState({
+      projectId: 'project-1',
+      chapterNumber: 7,
+      chapterState: 'blocked_for_manual_decision'
+    });
+
+    expect(prisma.chapterStateRecord.upsert).toHaveBeenCalledWith({
+      where: {
+        projectId_chapterNumber: {
+          projectId: 'project-1',
+          chapterNumber: 7
+        }
+      },
+      create: {
+        projectId: 'project-1',
+        chapterNumber: 7,
+        status: 'blocked_for_manual_decision'
+      },
+      update: {
+        status: 'blocked_for_manual_decision'
+      }
+    });
+  });
+
   it('creates chapter summaries inside a transaction when story state is missing', async () => {
     prisma.storyState.findUnique.mockResolvedValue(null);
     prisma.storyState.create.mockResolvedValue({ projectId: 'project-1' });

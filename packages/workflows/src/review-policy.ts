@@ -9,6 +9,10 @@ export function decideReviewNextState(input: {
     return { chapterState: 'approved', shouldRewrite: false };
   }
 
+  if (input.decision === 'blocked_for_manual_decision') {
+    return { chapterState: 'blocked_for_manual_decision', shouldRewrite: false };
+  }
+
   if (input.triggeredManualDecision || input.rewriteCount >= 2) {
     return { chapterState: 'blocked_for_manual_decision', shouldRewrite: false };
   }

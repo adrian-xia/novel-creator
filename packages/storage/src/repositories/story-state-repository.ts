@@ -118,6 +118,18 @@ export class StoryStateRepository {
     });
   }
 
+  async saveWorkflowDecidedChapterState(input: {
+    projectId: string;
+    chapterNumber: number;
+    chapterState: ChapterState;
+  }) {
+    return this.saveChapterState({
+      projectId: input.projectId,
+      chapterNumber: input.chapterNumber,
+      status: input.chapterState
+    });
+  }
+
   async saveReviewOutcome(outcome: ReviewOutcome) {
     return prisma.reviewOutcomeRecord.create({
       data: {

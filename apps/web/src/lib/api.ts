@@ -7,3 +7,13 @@ export async function getJson<T>(input: RequestInfo | URL, init?: RequestInit): 
 
   return response.json() as Promise<T>;
 }
+
+export async function getProjectProductionDetail(projectId: string) {
+  return {
+    projectId,
+    outline: null,
+    volumePlans: [],
+    chapters: [],
+    recentAgentRuns: []
+  };
+}

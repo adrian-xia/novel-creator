@@ -14,3 +14,11 @@
 - capacity service can lease a provider key
 - worker can enqueue a placeholder workflow job
 - web dashboard renders the internal control panel shell
+
+## Phase 2 Expected Behavior
+
+- `POST /projects/:projectId/flows/outline` queues outline generation
+- `POST /projects/:projectId/flows/volume` queues volume generation
+- `POST /projects/:projectId/flows/next-chapter` queues the next chapter pipeline
+- project detail UI shows outline, volumes, chapters, and recent agent runs
+- review/rewrite logic stops after two automatic rewrite attempts

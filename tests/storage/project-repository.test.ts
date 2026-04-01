@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createNovelProject } from '../../packages/domain/src/novel-project';
 
 const createProjectRecord = vi.fn();
+const findProjectRecord = vi.fn();
 
 vi.mock('../../packages/storage/src/client', () => ({
   prisma: {
     novelProject: {
-      create: createProjectRecord
+      create: createProjectRecord,
+      findUnique: findProjectRecord
     }
   }
 }));
@@ -14,6 +16,7 @@ vi.mock('../../packages/storage/src/client', () => ({
 describe('project repository contracts', () => {
   beforeEach(() => {
     createProjectRecord.mockReset();
+    findProjectRecord.mockReset();
   });
 
   it('creates a new draft project payload', () => {
@@ -46,6 +49,26 @@ describe('project repository contracts', () => {
     await expect(new ProjectRepository().create(project)).resolves.toEqual(project);
     expect(createProjectRecord).toHaveBeenCalledWith({
       data: project
+    });
+  });
+
+  it('finds a project by id through the Prisma repository', async () => {
+    const { ProjectRepository } = await import(
+      '../../packages/storage/src/repositories/project-repository'
+    );
+    const project = createNovelProject({
+      title: '天衡余烬',
+      genre: '仙侠',
+      premise: '废脉弟子从宗门旧案中追索失落真相',
+      targetChapterCount: 300,
+      chaptersPerDay: 2
+    });
+
+    findProjectRecord.mockResolvedValue(project);
+
+    await expect(new ProjectRepository().findById(project.id)).resolves.toEqual(project);
+    expect(findProjectRecord).toHaveBeenCalledWith({
+      where: { id: project.id }
     });
   });
 });

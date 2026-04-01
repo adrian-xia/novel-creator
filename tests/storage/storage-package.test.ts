@@ -26,7 +26,8 @@ describe('storage package setup', () => {
       stdio: 'pipe'
     });
 
-    const { prisma } = await importFreshModule('packages/storage/src/client.ts');
+    const { createPrismaClient, prisma } = await importFreshModule('packages/storage/src/client.ts');
+    expect(typeof createPrismaClient).toBe('function');
     expect(prisma.novelProject).toBeDefined();
     expect(prisma.promptConfig).toBeDefined();
 

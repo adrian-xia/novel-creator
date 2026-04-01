@@ -7,4 +7,10 @@ export class ProjectRepository {
       data: project
     });
   }
+
+  async findById(id: string): Promise<NovelProject | null> {
+    return prisma.novelProject.findUnique({
+      where: { id }
+    });
+  }
 }

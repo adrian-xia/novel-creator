@@ -1,8 +1,11 @@
-interface CapacityLease {
-  leaseId: string;
+interface AcquireRequest {
   provider: string;
   model: string;
-  apiKeyId: string;
+}
+
+interface CapacityLease {
+  keyId: string;
+  leaseId: string;
 }
 
 interface TokenUsage {
@@ -18,8 +21,8 @@ interface AgentRunResult {
 }
 
 interface AgentRunnerDeps {
-  acquire: () => Promise<CapacityLease>;
-  release: (leaseId: string) => Promise<void>;
+  acquire: (request: AcquireRequest) => Promise<CapacityLease>;
+  release: (lease: CapacityLease) => Promise<void>;
   renderPrompt: (input: Record<string, unknown>) => string;
   invokeModel: (input: {
     prompt: string;
@@ -34,30 +37,37 @@ interface AgentRunnerInput {
   promptConfigVersion: number;
   projectId: string;
   chapterNumber: number | null;
+  provider: string;
+  model: string;
   inputSnapshot: Record<string, unknown>;
 }
 
 export function createAgentRunner(deps: AgentRunnerDeps) {
   return {
     async run(input: AgentRunnerInput) {
-      const lease = await deps.acquire();
+      const lease = await deps.acquire({
+        provider: input.provider,
+        model: input.model
+      });
+      let phase: 'invoking-model' | 'recording-run' = 'invoking-model';
 
       try {
         const prompt = deps.renderPrompt(input.inputSnapshot);
         const result = await deps.invokeModel({
           prompt,
-          provider: lease.provider,
-          model: lease.model
+          provider: input.provider,
+          model: input.model
         });
 
+        phase = 'recording-run';
         await deps.saveAgentRun({
           projectId: input.projectId,
           chapterNumber: input.chapterNumber,
           agentType: input.agentType,
           promptConfigVersion: input.promptConfigVersion,
-          provider: lease.provider,
-          model: lease.model,
-          apiKeyId: lease.apiKeyId,
+          provider: input.provider,
+          model: input.model,
+          apiKeyId: lease.keyId,
           leaseId: lease.leaseId,
           inputSnapshot: input.inputSnapshot,
           rawOutput: result.rawOutput,
@@ -67,28 +77,30 @@ export function createAgentRunner(deps: AgentRunnerDeps) {
           errorMessage: null
         });
 
-        await deps.release(lease.leaseId);
         return result;
       } catch (error) {
-        await deps.saveAgentRun({
-          projectId: input.projectId,
-          chapterNumber: input.chapterNumber,
-          agentType: input.agentType,
-          promptConfigVersion: input.promptConfigVersion,
-          provider: lease.provider,
-          model: lease.model,
-          apiKeyId: lease.apiKeyId,
-          leaseId: lease.leaseId,
-          inputSnapshot: input.inputSnapshot,
-          rawOutput: '',
-          parsedOutput: null,
-          status: 'failed',
-          tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-          errorMessage: error instanceof Error ? error.message : 'unknown error'
-        });
+        if (phase === 'invoking-model') {
+          await deps.saveAgentRun({
+            projectId: input.projectId,
+            chapterNumber: input.chapterNumber,
+            agentType: input.agentType,
+            promptConfigVersion: input.promptConfigVersion,
+            provider: input.provider,
+            model: input.model,
+            apiKeyId: lease.keyId,
+            leaseId: lease.leaseId,
+            inputSnapshot: input.inputSnapshot,
+            rawOutput: '',
+            parsedOutput: null,
+            status: 'failed',
+            tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            errorMessage: error instanceof Error ? error.message : 'unknown error'
+          });
+        }
 
-        await deps.release(lease.leaseId);
         throw error;
+      } finally {
+        await deps.release(lease);
       }
     }
   };

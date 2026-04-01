@@ -211,14 +211,16 @@ model PublishTaskRecord {
   mode            String
   status          String
   payloadSnapshot Json
-  artifactId      String?
+  artifactId      String?  @unique
   attemptCount    Int      @default(0)
   lastError       String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   project         NovelProject @relation(fields: [projectId], references: [id])
+  artifact        ExportArtifactRecord? @relation(fields: [artifactId], references: [id], onDelete: SetNull)
 
   @@index([projectId, chapterNumber])
+  @@unique([projectId, chapterNumber, targetPlatform, mode])
 }
 
 model ExportArtifactRecord {
@@ -230,6 +232,7 @@ model ExportArtifactRecord {
   content        String
   createdAt      DateTime @default(now())
   project        NovelProject @relation(fields: [projectId], references: [id])
+  publishTask    PublishTaskRecord?
 }
 
 model WorkflowRunRecord {

@@ -56,7 +56,7 @@ describe('phase 3 domain contracts', () => {
       effectiveFromChapter: number | null;
     }>();
 
-    expectTypeOf<PublishTask>().toMatchTypeOf<{
+    expectTypeOf<PublishTask>().toEqualTypeOf<{
       id: string;
       projectId: string;
       chapterNumber: number;
@@ -71,7 +71,10 @@ describe('phase 3 domain contracts', () => {
         | 'manual_upload_pending'
         | 'manual_upload_confirmed'
         | 'failed';
+      payloadSnapshot: Record<string, unknown>;
       artifactId: string | null;
+      attemptCount: number;
+      lastError: string | null;
     }>();
 
     expectTypeOf<ExportArtifact>().toMatchTypeOf<{
@@ -83,12 +86,13 @@ describe('phase 3 domain contracts', () => {
       content: string;
     }>();
 
-    expectTypeOf<WorkflowRun>().toMatchTypeOf<{
+    expectTypeOf<WorkflowRun>().toEqualTypeOf<{
       id: string;
       flowName: string;
       projectId: string;
       chapterNumber: number | null;
       status: 'queued' | 'running' | 'succeeded' | 'failed';
+      errorMessage?: string | null;
     }>();
 
     expectTypeOf<StepRun>().toMatchTypeOf<{

@@ -2,6 +2,13 @@ import type { JsonObject, JsonValue, PromptConfig, ProviderCapacity } from '../.
 
 type PromptPayload = Omit<PromptConfig, 'id'>;
 type ProviderCapacityPayload = Omit<ProviderCapacity, 'id'>;
+type PublishProfilePayload = {
+  publishEnabled: boolean;
+  autoPublishTargets: string[];
+  manualExportTargets: string[];
+  defaultExportFormat: 'plain_text' | 'markdown' | 'bundle';
+  effectiveFromChapter: number | null;
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -134,5 +141,43 @@ export function parseProviderCapacityPayload(value: unknown): ProviderCapacityPa
     dailyBudget,
     enabled,
     priority
+  };
+}
+
+export function parsePublishProfilePayload(value: unknown): PublishProfilePayload | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const {
+    publishEnabled,
+    autoPublishTargets,
+    manualExportTargets,
+    defaultExportFormat,
+    effectiveFromChapter
+  } = value;
+
+  if (
+    !isBoolean(publishEnabled) ||
+    !Array.isArray(autoPublishTargets) ||
+    !autoPublishTargets.every(isString) ||
+    !Array.isArray(manualExportTargets) ||
+    !manualExportTargets.every(isString) ||
+    !isString(defaultExportFormat) ||
+    !['plain_text', 'markdown', 'bundle'].includes(defaultExportFormat)
+  ) {
+    return null;
+  }
+
+  if (effectiveFromChapter !== null && effectiveFromChapter !== undefined && !isNumber(effectiveFromChapter)) {
+    return null;
+  }
+
+  return {
+    publishEnabled,
+    autoPublishTargets,
+    manualExportTargets,
+    defaultExportFormat: defaultExportFormat as 'plain_text' | 'markdown' | 'bundle',
+    effectiveFromChapter: effectiveFromChapter ?? null
   };
 }

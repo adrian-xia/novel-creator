@@ -9,7 +9,9 @@ describe('reviewRewriteFlow', () => {
       'acquire-capacity',
       'run-review-agent',
       'persist-review-outcome',
-      'branch-on-review-decision'
+      'branch-on-review-decision',
+      'enqueue-decision-session-when-blocked',
+      'enqueue-publish-when-approved'
     ]);
   });
 });

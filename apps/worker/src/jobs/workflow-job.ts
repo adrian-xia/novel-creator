@@ -1,6 +1,7 @@
 import {
   createProjectFlow,
   enqueueWorkflow,
+  decisionSessionFlow,
   generateChapterFlow,
   generateOutlineFlow,
   generateVolumeFlow,
@@ -13,7 +14,8 @@ export async function runWorkflowJob(jobName: string) {
     'generate-outline-flow': generateOutlineFlow(),
     'generate-volume-flow': generateVolumeFlow(),
     'generate-chapter-flow': generateChapterFlow(),
-    'review-rewrite-flow': reviewRewriteFlow()
+    'review-rewrite-flow': reviewRewriteFlow(),
+    'decision-session-flow': decisionSessionFlow()
   } as const;
 
   const flow = flowMap[jobName as keyof typeof flowMap] ?? { name: jobName, steps: [] };

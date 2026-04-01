@@ -29,6 +29,15 @@ interface ChapterPlanContextInput {
   chapterNumber: number;
 }
 
+interface DecisionPacketContextInput {
+  projectId: string;
+  chapterNumber: number;
+  currentVolumeGoal: string;
+  recentSummaries: string[];
+  reviewIssues: string[];
+  currentProposal: string;
+}
+
 export function assembleChapterDraftContext(input: ChapterDraftContextInput): string {
   return [
     '## Current Chapter Plan',
@@ -58,5 +67,9 @@ export function assembleOutlineContext(input: OutlineContextInput) {
 }
 
 export function assembleChapterPlanContext(input: ChapterPlanContextInput) {
+  return input;
+}
+
+export function assembleDecisionPacketContext(input: DecisionPacketContextInput) {
   return input;
 }

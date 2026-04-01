@@ -17,6 +17,14 @@ model NovelProject {
   status             String
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+  storyState         StoryState?
+  outlineRecords     OutlineRecord[]
+  volumePlanRecords  VolumePlanRecord[]
+  chapterPlanRecords ChapterPlanRecord[]
+  chapterDraftRecords ChapterDraftRecord[]
+  chapterStateRecords ChapterStateRecord[]
+  reviewOutcomeRecords ReviewOutcomeRecord[]
+  agentRunRecords    AgentRunRecord[]
 }
 
 model PromptConfig {
@@ -60,6 +68,7 @@ model StoryState {
   currentPosition   Json
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  project           NovelProject @relation(fields: [projectId], references: [id])
 }
 
 model OutlineRecord {
@@ -67,6 +76,7 @@ model OutlineRecord {
   projectId String
   payload   Json
   createdAt DateTime @default(now())
+  project   NovelProject @relation(fields: [projectId], references: [id])
 }
 
 model VolumePlanRecord {
@@ -75,6 +85,7 @@ model VolumePlanRecord {
   volumeNumber Int
   payload      Json
   createdAt    DateTime @default(now())
+  project      NovelProject @relation(fields: [projectId], references: [id])
 }
 
 model ChapterPlanRecord {
@@ -83,6 +94,7 @@ model ChapterPlanRecord {
   chapterNumber Int
   payload       Json
   createdAt     DateTime @default(now())
+  project       NovelProject @relation(fields: [projectId], references: [id])
 }
 
 model ChapterDraftRecord {
@@ -94,6 +106,7 @@ model ChapterDraftRecord {
   summary       String?
   metadata      Json
   createdAt     DateTime @default(now())
+  project       NovelProject @relation(fields: [projectId], references: [id])
 
   @@unique([projectId, chapterNumber, version])
 }
@@ -105,6 +118,7 @@ model ChapterStateRecord {
   status        String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  project       NovelProject @relation(fields: [projectId], references: [id])
 
   @@unique([projectId, chapterNumber])
 }
@@ -115,6 +129,7 @@ model ReviewOutcomeRecord {
   chapterNumber Int
   payload       Json
   createdAt     DateTime @default(now())
+  project       NovelProject @relation(fields: [projectId], references: [id])
 }
 
 model AgentRunRecord {
@@ -134,4 +149,5 @@ model AgentRunRecord {
   tokenUsage          Json
   errorMessage        String?
   createdAt           DateTime @default(now())
+  project             NovelProject @relation(fields: [projectId], references: [id])
 }

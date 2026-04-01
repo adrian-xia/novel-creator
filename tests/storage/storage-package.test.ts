@@ -27,6 +27,29 @@ describe('storage package setup', () => {
     expect(schema).toContain('@@unique([projectId, chapterNumber, version])');
   });
 
+  it('declares project foreign-key relations for task 2 storage records', () => {
+    const schema = readFileSync(resolve(repoRoot, 'packages/storage/prisma/schema.prisma'), 'utf8');
+
+    expect(schema).toContain('storyState');
+    expect(schema).toContain('StoryState?');
+    expect(schema).toContain('outlineRecords');
+    expect(schema).toContain('OutlineRecord[]');
+    expect(schema).toContain('volumePlanRecords');
+    expect(schema).toContain('VolumePlanRecord[]');
+    expect(schema).toContain('chapterPlanRecords');
+    expect(schema).toContain('ChapterPlanRecord[]');
+    expect(schema).toContain('chapterDraftRecords');
+    expect(schema).toContain('ChapterDraftRecord[]');
+    expect(schema).toContain('chapterStateRecords');
+    expect(schema).toContain('ChapterStateRecord[]');
+    expect(schema).toContain('reviewOutcomeRecords');
+    expect(schema).toContain('ReviewOutcomeRecord[]');
+    expect(schema).toContain('agentRunRecords');
+    expect(schema).toContain('AgentRunRecord[]');
+    expect(schema).toContain('project');
+    expect(schema).toContain('NovelProject @relation(fields: [projectId], references: [id])');
+  });
+
   it('generates a Prisma client and imports the real storage scaffold', async () => {
     execFileSync('node', ['tests/storage/verify-storage-prisma-client.mjs'], {
       cwd: repoRoot,

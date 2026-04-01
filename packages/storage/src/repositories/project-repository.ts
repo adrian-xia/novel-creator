@@ -13,4 +13,12 @@ export class ProjectRepository {
       where: { id }
     });
   }
+
+  async exists(id: string): Promise<boolean> {
+    const project = await prisma.novelProject.findUnique({
+      where: { id }
+    });
+
+    return project !== null;
+  }
 }

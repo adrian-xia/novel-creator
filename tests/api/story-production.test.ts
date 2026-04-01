@@ -23,6 +23,7 @@ describe('story production routes', () => {
 
     expect(response.statusCode).toBe(202);
     expect(response.json()).toEqual({
+      projectId: 'project-1',
       flowName: 'generate-outline-flow',
       status: 'queued',
       steps: ['run-outline-agent']

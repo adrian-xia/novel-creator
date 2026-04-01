@@ -71,4 +71,24 @@ describe('project repository contracts', () => {
       where: { id: project.id }
     });
   });
+
+  it('checks whether a project exists through the Prisma repository', async () => {
+    const { ProjectRepository } = await import(
+      '../../packages/storage/src/repositories/project-repository'
+    );
+
+    findProjectRecord.mockResolvedValue({ id: 'project-123' });
+
+    await expect(new ProjectRepository().exists('project-123')).resolves.toBe(true);
+    expect(findProjectRecord).toHaveBeenCalledWith({
+      where: { id: 'project-123' }
+    });
+
+    findProjectRecord.mockResolvedValue(null);
+
+    await expect(new ProjectRepository().exists('project-missing')).resolves.toBe(false);
+    expect(findProjectRecord).toHaveBeenCalledWith({
+      where: { id: 'project-missing' }
+    });
+  });
 });

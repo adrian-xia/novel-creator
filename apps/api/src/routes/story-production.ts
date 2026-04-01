@@ -7,15 +7,30 @@ import {
 } from '../../../../packages/workflows/src';
 
 export function registerStoryProductionRoutes(app: FastifyInstance) {
-  app.post('/projects/:projectId/flows/outline', async (_request, reply) => {
-    return reply.code(202).send(enqueueWorkflow(generateOutlineFlow()));
+  app.post('/projects/:projectId/flows/outline', async (request, reply) => {
+    const { projectId } = request.params as { projectId: string };
+
+    return reply.code(202).send({
+      projectId,
+      ...enqueueWorkflow(generateOutlineFlow())
+    });
   });
 
-  app.post('/projects/:projectId/flows/volume', async (_request, reply) => {
-    return reply.code(202).send(enqueueWorkflow(generateVolumeFlow()));
+  app.post('/projects/:projectId/flows/volume', async (request, reply) => {
+    const { projectId } = request.params as { projectId: string };
+
+    return reply.code(202).send({
+      projectId,
+      ...enqueueWorkflow(generateVolumeFlow())
+    });
   });
 
-  app.post('/projects/:projectId/flows/next-chapter', async (_request, reply) => {
-    return reply.code(202).send(enqueueWorkflow(generateChapterFlow()));
+  app.post('/projects/:projectId/flows/next-chapter', async (request, reply) => {
+    const { projectId } = request.params as { projectId: string };
+
+    return reply.code(202).send({
+      projectId,
+      ...enqueueWorkflow(generateChapterFlow())
+    });
   });
 }

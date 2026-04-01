@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const prisma = vi.hoisted(() => ({
   storyState: {
-    upsert: vi.fn()
+    upsert: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn()
   },
   outlineRecord: {
     create: vi.fn()
@@ -62,7 +65,11 @@ describe('StoryStateRepository', () => {
   });
 
   it('appends approved chapter summaries back into story state', async () => {
-    prisma.storyState.upsert.mockResolvedValue({ projectId: 'project-1' });
+    prisma.storyState.findUnique.mockResolvedValue({
+      projectId: 'project-1',
+      chapterSummaries: [{ chapterNumber: 1, summary: '前情提要' }]
+    });
+    prisma.storyState.update.mockResolvedValue({ projectId: 'project-1' });
 
     const { StoryStateRepository } = await import(
       '../../packages/storage/src/repositories/story-state-repository'
@@ -76,13 +83,15 @@ describe('StoryStateRepository', () => {
       nextChapterNumber: 3
     });
 
-    expect(prisma.storyState.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        update: expect.objectContaining({
-          chapterSummaries: expect.anything(),
-          currentPosition: { nextChapterNumber: 3, currentVolumeNumber: null }
-        })
+    expect(prisma.storyState.update).toHaveBeenCalledWith({
+      where: { projectId: 'project-1' },
+      data: expect.objectContaining({
+        chapterSummaries: [
+          { chapterNumber: 1, summary: '前情提要' },
+          { chapterNumber: 2, summary: '主角确认师门内鬼，决定反查账册' }
+        ],
+        currentPosition: { nextChapterNumber: 3, currentVolumeNumber: null }
       })
-    );
+    });
   });
 });

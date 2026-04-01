@@ -106,23 +106,42 @@ export class StoryStateRepository {
     summary: string;
     nextChapterNumber: number;
   }) {
-    return prisma.storyState.upsert({
+    const nextSummary = {
+      chapterNumber: input.chapterNumber,
+      summary: input.summary
+    };
+    const currentPosition = {
+      nextChapterNumber: input.nextChapterNumber,
+      currentVolumeNumber: null
+    };
+    const existingState = await prisma.storyState.findUnique({
+      where: { projectId: input.projectId }
+    });
+
+    if (!existingState) {
+      return prisma.storyState.create({
+        data: {
+          projectId: input.projectId,
+          storyBible: null,
+          outline: null,
+          volumePlans: [],
+          confirmedFacts: [],
+          openForeshadowing: [],
+          chapterSummaries: [nextSummary],
+          currentPosition
+        }
+      });
+    }
+
+    const chapterSummaries = Array.isArray(existingState.chapterSummaries)
+      ? [...existingState.chapterSummaries, nextSummary]
+      : [nextSummary];
+
+    return prisma.storyState.update({
       where: { projectId: input.projectId },
-      create: {
-        projectId: input.projectId,
-        storyBible: null,
-        outline: null,
-        volumePlans: [],
-        confirmedFacts: [],
-        openForeshadowing: [],
-        chapterSummaries: [{ chapterNumber: input.chapterNumber, summary: input.summary }],
-        currentPosition: { nextChapterNumber: input.nextChapterNumber, currentVolumeNumber: null }
-      },
-      update: {
-        chapterSummaries: {
-          push: { chapterNumber: input.chapterNumber, summary: input.summary }
-        },
-        currentPosition: { nextChapterNumber: input.nextChapterNumber, currentVolumeNumber: null }
+      data: {
+        chapterSummaries,
+        currentPosition
       }
     });
   }

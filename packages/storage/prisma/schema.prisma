@@ -48,3 +48,77 @@ model ProviderCapacity {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
+
+model StoryState {
+  projectId         String   @id
+  storyBible        String?
+  outline           Json?
+  volumePlans       Json     @default("[]")
+  confirmedFacts    Json     @default("[]")
+  openForeshadowing Json     @default("[]")
+  chapterSummaries  Json     @default("[]")
+  currentPosition   Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model OutlineRecord {
+  id        String   @id @default(uuid())
+  projectId String
+  payload   Json
+  createdAt DateTime @default(now())
+}
+
+model VolumePlanRecord {
+  id           String   @id @default(uuid())
+  projectId    String
+  volumeNumber Int
+  payload      Json
+  createdAt    DateTime @default(now())
+}
+
+model ChapterPlanRecord {
+  id            String   @id @default(uuid())
+  projectId     String
+  chapterNumber Int
+  payload       Json
+  createdAt     DateTime @default(now())
+}
+
+model ChapterDraftRecord {
+  id            String   @id @default(uuid())
+  projectId     String
+  chapterNumber Int
+  version       Int
+  content       String
+  summary       String?
+  metadata      Json
+  createdAt     DateTime @default(now())
+}
+
+model ReviewOutcomeRecord {
+  id            String   @id @default(uuid())
+  projectId     String
+  chapterNumber Int
+  payload       Json
+  createdAt     DateTime @default(now())
+}
+
+model AgentRunRecord {
+  id                  String   @id @default(uuid())
+  projectId           String
+  chapterNumber       Int?
+  agentType           String
+  promptConfigVersion Int
+  provider            String
+  model               String
+  apiKeyId            String
+  leaseId             String
+  inputSnapshot       Json
+  rawOutput           String
+  parsedOutput        Json?
+  status              String
+  tokenUsage          Json
+  errorMessage        String?
+  createdAt           DateTime @default(now())
+}

@@ -1,19 +1,38 @@
 import type { DecisionResolution } from '@novel-creator/domain';
 
-export function buildResolutionDraft(input: {
+export type ResolutionDraftInput = {
   sessionId: string;
-  direction: string;
-  rationale: string;
-}): DecisionResolution {
-  const keepCurrent = input.direction === 'keep current';
+  resolutionType:
+    | 'accept_current'
+    | 'accept_alternative'
+    | 'replan_required'
+    | 'pause_project';
+  decisionSummary: string;
+  storyFactsToApply?: string[];
+  chapterPlanAdjustments?: string[];
+  volumeImpact?: string | null;
+};
 
+function deriveNextAction(input: ResolutionDraftInput['resolutionType']) {
+  switch (input) {
+    case 'accept_current':
+      return 'resume_review';
+    case 'pause_project':
+      return 'pause_project';
+    case 'accept_alternative':
+    case 'replan_required':
+      return 'replan_chapter';
+  }
+}
+
+export function buildResolutionDraft(input: ResolutionDraftInput): DecisionResolution {
   return {
     sessionId: input.sessionId,
-    resolutionType: keepCurrent ? 'accept_current' : 'accept_alternative',
-    decisionSummary: `${input.direction}: ${input.rationale}`,
-    storyFactsToApply: [],
-    chapterPlanAdjustments: keepCurrent ? [] : [input.direction],
-    volumeImpact: null,
-    nextAction: keepCurrent ? 'resume_review' : 'replan_chapter'
+    resolutionType: input.resolutionType,
+    decisionSummary: input.decisionSummary,
+    storyFactsToApply: input.storyFactsToApply ?? [],
+    chapterPlanAdjustments: input.chapterPlanAdjustments ?? [],
+    volumeImpact: input.volumeImpact ?? null,
+    nextAction: deriveNextAction(input.resolutionType)
   };
 }

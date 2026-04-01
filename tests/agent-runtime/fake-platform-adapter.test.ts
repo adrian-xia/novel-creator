@@ -12,4 +12,16 @@ describe('fakePlatformAdapter', () => {
     expect(result.status).toBe('published');
     expect(result.remoteId).toContain('alpha');
   });
+
+  it('validates config and reports publish status', async () => {
+    expect(fakePlatformAdapter.validateConfig({ targetPlatform: 'alpha' })).toBe(true);
+    expect(fakePlatformAdapter.validateConfig({ targetPlatform: '' })).toBe(false);
+
+    await expect(
+      fakePlatformAdapter.getPublishStatus({ remoteId: 'alpha-chapter-4' })
+    ).resolves.toEqual({
+      remoteId: 'alpha-chapter-4',
+      status: 'published'
+    });
+  });
 });

@@ -16,4 +16,18 @@ describe('runWorkflowJob', () => {
       ]
     });
   });
+
+  it('dispatches the publish-chapter workflow', async () => {
+    await expect(runWorkflowJob('publish-chapter-flow')).resolves.toEqual({
+      flowName: 'publish-chapter-flow',
+      status: 'queued',
+      steps: [
+        'load-publish-profile',
+        'expand-publish-tasks',
+        'run-adapter-publishes',
+        'run-manual-exports',
+        'persist-publish-results'
+      ]
+    });
+  });
 });

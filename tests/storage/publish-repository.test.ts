@@ -8,7 +8,9 @@ const prisma = vi.hoisted(() => ({
   },
   publishTaskRecord: {
     upsert: vi.fn(),
-    findMany: vi.fn()
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    update: vi.fn()
   },
   exportArtifactRecord: {
     create: vi.fn()
@@ -28,11 +30,25 @@ const taskStore = vi.hoisted(() => new Map<string, {
   lastError: string | null;
 }>());
 
+const taskByIdStore = vi.hoisted(() => new Map<string, {
+  id: string;
+  projectId: string;
+  chapterNumber: number;
+  targetPlatform: string;
+  mode: 'adapter_publish' | 'manual_export';
+  status: string;
+  payloadSnapshot: Record<string, unknown>;
+  artifactId: string | null;
+  attemptCount: number;
+  lastError: string | null;
+}>());
+
 vi.mock('../../packages/storage/src/client', () => ({ prisma }));
 
 describe('PublishRepository', () => {
   beforeEach(() => {
     taskStore.clear();
+    taskByIdStore.clear();
 
     prisma.$transaction.mockReset();
     prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => Promise<unknown>) =>
@@ -47,9 +63,29 @@ describe('PublishRepository', () => {
       Object.values(model).forEach((fn) => {
         if (typeof fn === 'function' && 'mockReset' in fn) {
           fn.mockReset();
-        }
-      });
+      }
     });
+
+    prisma.publishTaskRecord.findUnique.mockImplementation(async ({ where }) =>
+      taskByIdStore.get(where.id) ?? null
+    );
+
+    prisma.publishTaskRecord.update.mockImplementation(async ({ where, data }) => {
+      const existing = taskByIdStore.get(where.id);
+
+      if (!existing) {
+        throw new Error(`Missing publish task ${where.id}`);
+      }
+
+      const updated = {
+        ...existing,
+        ...data
+      };
+
+      taskByIdStore.set(where.id, updated);
+      return updated;
+    });
+  });
   });
 
   it('expands mixed publish tasks and preserves advanced task state on retry', async () => {
@@ -187,21 +223,60 @@ describe('PublishRepository', () => {
     expect(prisma.publishProfileRecord.upsert).not.toHaveBeenCalled();
   });
 
-  it('marks manual exports ready and confirms upload completion', async () => {
-    prisma.publishTaskRecord.update = vi
-      .fn()
-      .mockImplementation(async ({ where, data }) => ({
-        id: where.id,
-        projectId: 'project-1',
-        chapterNumber: 4,
-        targetPlatform: 'beta',
-        mode: 'manual_export',
-        status: data.status,
-        payloadSnapshot: { title: 'Chapter 4' },
-        artifactId: data.artifactId ?? 'artifact-9',
-        attemptCount: 0,
-        lastError: null
-      }));
+  it('marks manual exports ready from pending and is idempotent on same-artifact retry', async () => {
+    taskByIdStore.set('task-9', {
+      id: 'task-9',
+      projectId: 'project-1',
+      chapterNumber: 4,
+      targetPlatform: 'beta',
+      mode: 'manual_export',
+      status: 'pending',
+      payloadSnapshot: { title: 'Chapter 4' },
+      artifactId: null,
+      attemptCount: 0,
+      lastError: 'stale export error'
+    });
+
+    const { PublishRepository } = await import(
+      '../../packages/storage/src/repositories/publish-repository'
+    );
+    const repository = new PublishRepository();
+
+    const first = await repository.markManualExportReady({
+      publishTaskId: 'task-9',
+      artifactId: 'artifact-9'
+    });
+    const second = await repository.markManualExportReady({
+      publishTaskId: 'task-9',
+      artifactId: 'artifact-9'
+    });
+
+    expect(first).toMatchObject({
+      status: 'manual_upload_pending',
+      artifactId: 'artifact-9',
+      lastError: null
+    });
+    expect(second).toMatchObject({
+      status: 'manual_upload_pending',
+      artifactId: 'artifact-9',
+      lastError: null
+    });
+    expect(prisma.publishTaskRecord.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects manual export readiness for the wrong mode or artifact retry', async () => {
+    taskByIdStore.set('task-9', {
+      id: 'task-9',
+      projectId: 'project-1',
+      chapterNumber: 4,
+      targetPlatform: 'beta',
+      mode: 'adapter_publish',
+      status: 'pending',
+      payloadSnapshot: { title: 'Chapter 4' },
+      artifactId: null,
+      attemptCount: 0,
+      lastError: null
+    });
 
     const { PublishRepository } = await import(
       '../../packages/storage/src/repositories/publish-repository'
@@ -213,25 +288,106 @@ describe('PublishRepository', () => {
         publishTaskId: 'task-9',
         artifactId: 'artifact-9'
       })
-    ).resolves.toMatchObject({
+    ).rejects.toThrow(/manual_export/i);
+
+    expect(prisma.publishTaskRecord.update).not.toHaveBeenCalled();
+
+    taskByIdStore.set('task-10', {
+      id: 'task-10',
+      projectId: 'project-1',
+      chapterNumber: 4,
+      targetPlatform: 'beta',
+      mode: 'manual_export',
       status: 'manual_upload_pending',
-      artifactId: 'artifact-9'
+      payloadSnapshot: { title: 'Chapter 4' },
+      artifactId: 'artifact-9',
+      attemptCount: 0,
+      lastError: null
     });
 
-    await expect(repository.confirmManualUpload('task-9')).resolves.toMatchObject({
-      status: 'manual_upload_confirmed'
+    await expect(
+      repository.markManualExportReady({
+        publishTaskId: 'task-10',
+        artifactId: 'artifact-10'
+      })
+    ).rejects.toThrow(/artifact/i);
+
+    expect(prisma.publishTaskRecord.update).not.toHaveBeenCalled();
+  });
+
+  it('confirms manual upload from ready state and is idempotent on retry', async () => {
+    taskByIdStore.set('task-9', {
+      id: 'task-9',
+      projectId: 'project-1',
+      chapterNumber: 4,
+      targetPlatform: 'beta',
+      mode: 'manual_export',
+      status: 'manual_upload_pending',
+      payloadSnapshot: { title: 'Chapter 4' },
+      artifactId: 'artifact-9',
+      attemptCount: 0,
+      lastError: 'stale manual upload error'
     });
 
-    expect(prisma.publishTaskRecord.update).toHaveBeenCalledWith({
-      where: { id: 'task-9' },
-      data: {
-        status: 'manual_upload_pending',
-        artifactId: 'artifact-9'
-      }
+    const { PublishRepository } = await import(
+      '../../packages/storage/src/repositories/publish-repository'
+    );
+    const repository = new PublishRepository();
+
+    const first = await repository.confirmManualUpload('task-9');
+    const second = await repository.confirmManualUpload('task-9');
+
+    expect(first).toMatchObject({
+      status: 'manual_upload_confirmed',
+      artifactId: 'artifact-9',
+      lastError: null
     });
-    expect(prisma.publishTaskRecord.update).toHaveBeenCalledWith({
-      where: { id: 'task-9' },
-      data: { status: 'manual_upload_confirmed' }
+    expect(second).toMatchObject({
+      status: 'manual_upload_confirmed',
+      artifactId: 'artifact-9',
+      lastError: null
     });
+    expect(prisma.publishTaskRecord.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects manual upload confirmation for wrong mode or wrong state', async () => {
+    taskByIdStore.set('task-9', {
+      id: 'task-9',
+      projectId: 'project-1',
+      chapterNumber: 4,
+      targetPlatform: 'beta',
+      mode: 'adapter_publish',
+      status: 'manual_upload_pending',
+      payloadSnapshot: { title: 'Chapter 4' },
+      artifactId: 'artifact-9',
+      attemptCount: 0,
+      lastError: null
+    });
+
+    const { PublishRepository } = await import(
+      '../../packages/storage/src/repositories/publish-repository'
+    );
+    const repository = new PublishRepository();
+
+    await expect(repository.confirmManualUpload('task-9')).rejects.toThrow(/manual_export/i);
+
+    expect(prisma.publishTaskRecord.update).not.toHaveBeenCalled();
+
+    taskByIdStore.set('task-10', {
+      id: 'task-10',
+      projectId: 'project-1',
+      chapterNumber: 4,
+      targetPlatform: 'beta',
+      mode: 'manual_export',
+      status: 'pending',
+      payloadSnapshot: { title: 'Chapter 4' },
+      artifactId: null,
+      attemptCount: 0,
+      lastError: null
+    });
+
+    await expect(repository.confirmManualUpload('task-10')).rejects.toThrow(/ready/i);
+
+    expect(prisma.publishTaskRecord.update).not.toHaveBeenCalled();
   });
 });

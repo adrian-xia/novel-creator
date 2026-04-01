@@ -1,6 +1,19 @@
 import type { ExportFormat, PublishProfile } from '@novel-creator/domain';
 import { prisma } from '../client';
 
+type PublishTaskRecordLike = {
+  id: string;
+  projectId: string;
+  chapterNumber: number;
+  targetPlatform: string;
+  mode: 'adapter_publish' | 'manual_export';
+  status: string;
+  payloadSnapshot: Record<string, unknown>;
+  artifactId: string | null;
+  attemptCount: number;
+  lastError: string | null;
+};
+
 function normalizeTargets(targets: unknown): string[] {
   if (!Array.isArray(targets)) {
     return [];
@@ -21,6 +34,20 @@ function assertNoTargetOverlap(projectId: string, autoTargets: string[], manualT
       `Publish target overlap for project ${projectId}: ${overlap.join(', ')}`
     );
   }
+}
+
+function assertManualExportTask(task: PublishTaskRecordLike | null, publishTaskId: string) {
+  if (!task) {
+    throw new Error(`Publish task ${publishTaskId} not found`);
+  }
+
+  if (task.mode !== 'manual_export') {
+    throw new Error(
+      `Publish task ${publishTaskId} is not a manual_export task`
+    );
+  }
+
+  return task;
 }
 
 export class PublishRepository {
@@ -142,19 +169,72 @@ export class PublishRepository {
     publishTaskId: string;
     artifactId: string;
   }) {
-    return prisma.publishTaskRecord.update({
-      where: { id: input.publishTaskId },
-      data: {
-        status: 'manual_upload_pending',
-        artifactId: input.artifactId
+    const task = assertManualExportTask(
+      await prisma.publishTaskRecord.findUnique({
+        where: { id: input.publishTaskId }
+      }),
+      input.publishTaskId
+    );
+
+    if (task.status === 'pending') {
+      return prisma.publishTaskRecord.update({
+        where: { id: input.publishTaskId },
+        data: {
+          status: 'manual_upload_pending',
+          artifactId: input.artifactId,
+          lastError: null
+        }
+      });
+    }
+
+    if (task.status === 'manual_upload_pending' || task.status === 'manual_upload_confirmed') {
+      if (task.artifactId === input.artifactId) {
+        return task;
       }
-    });
+
+      throw new Error(
+        `Publish task ${input.publishTaskId} already references artifact ${task.artifactId ?? 'none'}`
+      );
+    }
+
+    throw new Error(
+      `Publish task ${input.publishTaskId} is not ready for manual export from state ${task.status}`
+    );
   }
 
   async confirmManualUpload(publishTaskId: string) {
+    const task = assertManualExportTask(
+      await prisma.publishTaskRecord.findUnique({
+        where: { id: publishTaskId }
+      }),
+      publishTaskId
+    );
+
+    if (task.status === 'manual_upload_confirmed') {
+      if (task.artifactId !== null) {
+        return task;
+      }
+
+      throw new Error(`Publish task ${publishTaskId} is confirmed without an artifact binding`);
+    }
+
+    if (task.status !== 'manual_upload_pending') {
+      throw new Error(
+        `Publish task ${publishTaskId} is not ready for manual upload from state ${task.status}`
+      );
+    }
+
+    if (task.artifactId === null) {
+      throw new Error(`Publish task ${publishTaskId} is ready without an artifact binding`);
+    }
+
     return prisma.publishTaskRecord.update({
       where: { id: publishTaskId },
-      data: { status: 'manual_upload_confirmed' }
+      data: {
+        status: 'manual_upload_confirmed',
+        artifactId: task.artifactId,
+        lastError: null
+      }
     });
   }
 }

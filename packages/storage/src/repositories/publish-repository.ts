@@ -137,4 +137,24 @@ export class PublishRepository {
       data: input
     });
   }
+
+  async markManualExportReady(input: {
+    publishTaskId: string;
+    artifactId: string;
+  }) {
+    return prisma.publishTaskRecord.update({
+      where: { id: input.publishTaskId },
+      data: {
+        status: 'manual_upload_pending',
+        artifactId: input.artifactId
+      }
+    });
+  }
+
+  async confirmManualUpload(publishTaskId: string) {
+    return prisma.publishTaskRecord.update({
+      where: { id: publishTaskId },
+      data: { status: 'manual_upload_confirmed' }
+    });
+  }
 }

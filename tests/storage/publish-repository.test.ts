@@ -186,4 +186,52 @@ describe('PublishRepository', () => {
 
     expect(prisma.publishProfileRecord.upsert).not.toHaveBeenCalled();
   });
+
+  it('marks manual exports ready and confirms upload completion', async () => {
+    prisma.publishTaskRecord.update = vi
+      .fn()
+      .mockImplementation(async ({ where, data }) => ({
+        id: where.id,
+        projectId: 'project-1',
+        chapterNumber: 4,
+        targetPlatform: 'beta',
+        mode: 'manual_export',
+        status: data.status,
+        payloadSnapshot: { title: 'Chapter 4' },
+        artifactId: data.artifactId ?? 'artifact-9',
+        attemptCount: 0,
+        lastError: null
+      }));
+
+    const { PublishRepository } = await import(
+      '../../packages/storage/src/repositories/publish-repository'
+    );
+    const repository = new PublishRepository();
+
+    await expect(
+      repository.markManualExportReady({
+        publishTaskId: 'task-9',
+        artifactId: 'artifact-9'
+      })
+    ).resolves.toMatchObject({
+      status: 'manual_upload_pending',
+      artifactId: 'artifact-9'
+    });
+
+    await expect(repository.confirmManualUpload('task-9')).resolves.toMatchObject({
+      status: 'manual_upload_confirmed'
+    });
+
+    expect(prisma.publishTaskRecord.update).toHaveBeenCalledWith({
+      where: { id: 'task-9' },
+      data: {
+        status: 'manual_upload_pending',
+        artifactId: 'artifact-9'
+      }
+    });
+    expect(prisma.publishTaskRecord.update).toHaveBeenCalledWith({
+      where: { id: 'task-9' },
+      data: { status: 'manual_upload_confirmed' }
+    });
+  });
 });

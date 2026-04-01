@@ -5,6 +5,7 @@ import {
   generateChapterFlow,
   generateOutlineFlow,
   generateVolumeFlow,
+  publishChapterFlow,
   reviewRewriteFlow
 } from '../../../../packages/workflows/src';
 
@@ -14,6 +15,7 @@ export async function runWorkflowJob(jobName: string) {
     'generate-outline-flow': generateOutlineFlow(),
     'generate-volume-flow': generateVolumeFlow(),
     'generate-chapter-flow': generateChapterFlow(),
+    'publish-chapter-flow': publishChapterFlow(),
     'review-rewrite-flow': reviewRewriteFlow(),
     'decision-session-flow': decisionSessionFlow()
   } as const;

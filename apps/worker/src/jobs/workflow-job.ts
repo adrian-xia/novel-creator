@@ -1,9 +1,22 @@
-import { createProjectFlow, enqueueWorkflow } from '../../../../packages/workflows/src';
+import {
+  createProjectFlow,
+  enqueueWorkflow,
+  generateChapterFlow,
+  generateOutlineFlow,
+  generateVolumeFlow,
+  reviewRewriteFlow
+} from '../../../../packages/workflows/src';
 
 export async function runWorkflowJob(jobName: string) {
-  const flow = jobName === 'create-project-flow'
-    ? createProjectFlow()
-    : { name: jobName, steps: [] };
+  const flowMap = {
+    'create-project-flow': createProjectFlow(),
+    'generate-outline-flow': generateOutlineFlow(),
+    'generate-volume-flow': generateVolumeFlow(),
+    'generate-chapter-flow': generateChapterFlow(),
+    'review-rewrite-flow': reviewRewriteFlow()
+  } as const;
+
+  const flow = flowMap[jobName as keyof typeof flowMap] ?? { name: jobName, steps: [] };
 
   return enqueueWorkflow(flow);
 }

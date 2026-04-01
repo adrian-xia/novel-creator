@@ -4,4 +4,12 @@ export function createPrismaClient() {
   return new PrismaClient();
 }
 
-export const prisma = createPrismaClient();
+const globalForPrisma = globalThis as typeof globalThis & {
+  prisma?: PrismaClient;
+};
+
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}

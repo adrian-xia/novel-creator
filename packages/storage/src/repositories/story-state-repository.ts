@@ -130,6 +130,14 @@ export class StoryStateRepository {
     });
   }
 
+  async markChapterBlockedForDecision(input: { projectId: string; chapterNumber: number }) {
+    return this.saveChapterState({
+      projectId: input.projectId,
+      chapterNumber: input.chapterNumber,
+      status: 'blocked_for_manual_decision'
+    });
+  }
+
   async saveReviewOutcome(outcome: ReviewOutcome) {
     return prisma.reviewOutcomeRecord.create({
       data: {

@@ -21,4 +21,26 @@ export class ProjectRepository {
 
     return project !== null;
   }
+
+  async getProjectDecisionAndPublishingDetail(projectId: string) {
+    return prisma.novelProject.findUnique({
+      where: { id: projectId },
+      include: {
+        storyState: true,
+        chapterStateRecords: true,
+        reviewOutcomeRecords: true,
+        agentRunRecords: { orderBy: { createdAt: 'desc' }, take: 10 },
+        publishProfile: true,
+        publishTaskRecords: { orderBy: { createdAt: 'desc' }, take: 20 },
+        decisionSessions: {
+          orderBy: { updatedAt: 'desc' },
+          take: 20,
+          include: {
+            messages: { orderBy: { createdAt: 'asc' } },
+            resolution: true
+          }
+        }
+      }
+    });
+  }
 }

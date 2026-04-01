@@ -1,0 +1,71 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const prisma = vi.hoisted(() => ({
+  workflowRunRecord: {
+    create: vi.fn(),
+    findUnique: vi.fn(),
+    update: vi.fn()
+  },
+  stepRunRecord: {
+    create: vi.fn(),
+    updateMany: vi.fn()
+  }
+}));
+
+vi.mock('../../packages/storage/src/client', () => ({ prisma }));
+
+describe('WorkflowRunRepository', () => {
+  beforeEach(() => {
+    Object.values(prisma).forEach((model) => {
+      Object.values(model).forEach((fn) => {
+        if (typeof fn === 'function' && 'mockReset' in fn) {
+          fn.mockReset();
+        }
+      });
+    });
+  });
+
+  it('persists workflow and step status transitions', async () => {
+    prisma.workflowRunRecord.create.mockResolvedValue({
+      id: 'workflow-run-1',
+      flowName: 'publish-chapter-flow',
+      projectId: 'project-1',
+      chapterNumber: 10,
+      status: 'queued'
+    });
+    prisma.stepRunRecord.create.mockResolvedValue({
+      workflowRunId: 'workflow-run-1',
+      stepName: 'expand-publish-tasks',
+      status: 'running'
+    });
+    prisma.stepRunRecord.updateMany.mockResolvedValue({ count: 1 });
+    prisma.workflowRunRecord.update.mockResolvedValue({
+      id: 'workflow-run-1',
+      status: 'succeeded'
+    });
+    prisma.workflowRunRecord.findUnique.mockResolvedValue({
+      id: 'workflow-run-1',
+      status: 'succeeded',
+      stepRuns: [{ stepName: 'expand-publish-tasks', status: 'succeeded' }]
+    });
+
+    const { WorkflowRunRepository } = await import(
+      '../../packages/storage/src/repositories/workflow-run-repository'
+    );
+    const repository = new WorkflowRunRepository();
+
+    const run = await repository.createRun({
+      flowName: 'publish-chapter-flow',
+      projectId: 'project-1',
+      chapterNumber: 10
+    });
+
+    await repository.markStepRunning(run.id, 'expand-publish-tasks');
+    await repository.markStepSucceeded(run.id, 'expand-publish-tasks');
+    await repository.markRunSucceeded(run.id);
+
+    const detail = await repository.getRunDetail(run.id);
+    expect(detail?.status).toBe('succeeded');
+    expect(detail?.steps[0]?.status).toBe('succeeded');
+  });
+});

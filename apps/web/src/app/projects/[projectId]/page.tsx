@@ -28,6 +28,15 @@ export default async function ProjectDetailPage({
         <h2>Recent Agent Runs</h2>
         <pre>{JSON.stringify(detail.recentAgentRuns, null, 2)}</pre>
       </section>
+      <section>
+        <h2>Publish Profile</h2>
+        <pre>{JSON.stringify(detail.publishProfile, null, 2)}</pre>
+      </section>
+      <nav>
+        <a href="/decision-sessions">Decision Queue</a>
+        <a href="/publish">Publish Center</a>
+        <a href="/runs">Workflow Runs</a>
+      </nav>
     </main>
   );
 }

@@ -51,15 +51,19 @@ describe('DecisionSessionRepository', () => {
       id: 'decision-session-1',
       status: 'resolved'
     });
-    prisma.decisionSessionRecord.findUnique.mockResolvedValue({
-      id: 'decision-session-1',
-      status: 'resolved',
-      messages: [{ id: 'message-1', role: 'human', content: 'Give me a safer alternative' }],
-      resolution: {
-        sessionId: 'decision-session-1',
-        resolutionType: 'accept_alternative'
-      }
-    });
+    prisma.decisionSessionRecord.findUnique
+      .mockResolvedValueOnce({
+        status: 'open'
+      })
+      .mockResolvedValue({
+        id: 'decision-session-1',
+        status: 'resolved',
+        messages: [{ id: 'message-1', role: 'human', content: 'Give me a safer alternative' }],
+        resolution: {
+          sessionId: 'decision-session-1',
+          resolutionType: 'accept_alternative'
+        }
+      });
 
     const { DecisionSessionRepository } = await import(
       '../../packages/storage/src/repositories/decision-session-repository'
@@ -76,6 +80,11 @@ describe('DecisionSessionRepository', () => {
       sessionId: session.id,
       role: 'human',
       content: 'Give me a safer alternative'
+    });
+
+    expect(prisma.decisionSessionRecord.update).toHaveBeenCalledWith({
+      where: { id: session.id },
+      data: { status: 'open' }
     });
 
     await repository.saveResolution({

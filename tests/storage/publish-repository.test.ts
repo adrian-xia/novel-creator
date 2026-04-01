@@ -7,7 +7,8 @@ const prisma = vi.hoisted(() => ({
     findUnique: vi.fn()
   },
   publishTaskRecord: {
-    create: vi.fn()
+    upsert: vi.fn(),
+    findMany: vi.fn()
   },
   exportArtifactRecord: {
     create: vi.fn()
@@ -53,7 +54,33 @@ describe('PublishRepository', () => {
       defaultExportFormat: 'bundle',
       effectiveFromChapter: 3
     });
-    prisma.publishTaskRecord.create.mockImplementation(async ({ data }) => data);
+    prisma.publishTaskRecord.upsert.mockImplementation(async ({ create }) => create);
+    prisma.publishTaskRecord.findMany.mockResolvedValue([
+      {
+        id: 'task-1',
+        projectId: 'project-1',
+        chapterNumber: 3,
+        targetPlatform: 'alpha',
+        mode: 'adapter_publish',
+        status: 'pending',
+        payloadSnapshot: { title: 'Chapter 3' },
+        artifactId: null,
+        attemptCount: 0,
+        lastError: null
+      },
+      {
+        id: 'task-2',
+        projectId: 'project-1',
+        chapterNumber: 3,
+        targetPlatform: 'beta',
+        mode: 'manual_export',
+        status: 'pending',
+        payloadSnapshot: { title: 'Chapter 3' },
+        artifactId: null,
+        attemptCount: 0,
+        lastError: null
+      }
+    ]);
 
     const { PublishRepository } = await import(
       '../../packages/storage/src/repositories/publish-repository'
@@ -77,5 +104,34 @@ describe('PublishRepository', () => {
 
     expect(tasks).toHaveLength(2);
     expect(tasks.map((task) => task.mode).sort()).toEqual(['adapter_publish', 'manual_export']);
+
+    const retriedTasks = await repository.createPublishTasks({
+      projectId: 'project-1',
+      chapterNumber: 3,
+      payloadSnapshot: { title: 'Chapter 3' }
+    });
+
+    expect(retriedTasks).toHaveLength(2);
+    expect(prisma.publishTaskRecord.upsert).toHaveBeenCalledTimes(4);
+  });
+
+  it('rejects overlapping publish targets at the repository boundary', async () => {
+    const { PublishRepository } = await import(
+      '../../packages/storage/src/repositories/publish-repository'
+    );
+    const repository = new PublishRepository();
+
+    await expect(
+      repository.upsertPublishProfile({
+        projectId: 'project-1',
+        publishEnabled: true,
+        autoPublishTargets: ['alpha'],
+        manualExportTargets: ['alpha'],
+        defaultExportFormat: 'bundle',
+        effectiveFromChapter: null
+      })
+    ).rejects.toThrow(/overlap/i);
+
+    expect(prisma.publishProfileRecord.upsert).not.toHaveBeenCalled();
   });
 });

@@ -1,12 +1,47 @@
 import type { ExportFormat, PublishProfile } from '@novel-creator/domain';
 import { prisma } from '../client';
 
+function normalizeTargets(targets: unknown): string[] {
+  if (!Array.isArray(targets)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      targets.filter((target): target is string => typeof target === 'string' && target.length > 0)
+    )
+  ];
+}
+
+function assertNoTargetOverlap(projectId: string, autoTargets: string[], manualTargets: string[]) {
+  const overlap = autoTargets.filter((target) => manualTargets.includes(target));
+
+  if (overlap.length > 0) {
+    throw new Error(
+      `Publish target overlap for project ${projectId}: ${overlap.join(', ')}`
+    );
+  }
+}
+
 export class PublishRepository {
   async upsertPublishProfile(profile: PublishProfile) {
+    const autoPublishTargets = normalizeTargets(profile.autoPublishTargets);
+    const manualExportTargets = normalizeTargets(profile.manualExportTargets);
+
+    assertNoTargetOverlap(profile.projectId, autoPublishTargets, manualExportTargets);
+
     return prisma.publishProfileRecord.upsert({
       where: { projectId: profile.projectId },
-      create: profile,
-      update: profile
+      create: {
+        ...profile,
+        autoPublishTargets,
+        manualExportTargets
+      },
+      update: {
+        ...profile,
+        autoPublishTargets,
+        manualExportTargets
+      }
     });
   }
 
@@ -23,6 +58,11 @@ export class PublishRepository {
       return [];
     }
 
+    const autoTargets = normalizeTargets(profile.autoPublishTargets);
+    const exportTargets = normalizeTargets(profile.manualExportTargets);
+
+    assertNoTargetOverlap(profile.projectId, autoTargets, exportTargets);
+
     if (
       profile.effectiveFromChapter !== null &&
       input.chapterNumber < profile.effectiveFromChapter
@@ -30,40 +70,65 @@ export class PublishRepository {
       return [];
     }
 
-    const autoTargets = Array.isArray(profile.autoPublishTargets) ? profile.autoPublishTargets : [];
-    const exportTargets = Array.isArray(profile.manualExportTargets)
-      ? profile.manualExportTargets
-      : [];
-
     return prisma.$transaction(async (tx) => {
-      const tasks = [
+      await Promise.all([
         ...autoTargets.map((target) =>
-          tx.publishTaskRecord.create({
-            data: {
+          tx.publishTaskRecord.upsert({
+            where: {
+              projectId_chapterNumber_targetPlatform_mode: {
+                projectId: input.projectId,
+                chapterNumber: input.chapterNumber,
+                targetPlatform: target,
+                mode: 'adapter_publish'
+              }
+            },
+            create: {
               projectId: input.projectId,
               chapterNumber: input.chapterNumber,
-              targetPlatform: String(target),
+              targetPlatform: target,
               mode: 'adapter_publish',
+              status: 'pending',
+              payloadSnapshot: input.payloadSnapshot
+            },
+            update: {
               status: 'pending',
               payloadSnapshot: input.payloadSnapshot
             }
           })
         ),
         ...exportTargets.map((target) =>
-          tx.publishTaskRecord.create({
-            data: {
+          tx.publishTaskRecord.upsert({
+            where: {
+              projectId_chapterNumber_targetPlatform_mode: {
+                projectId: input.projectId,
+                chapterNumber: input.chapterNumber,
+                targetPlatform: target,
+                mode: 'manual_export'
+              }
+            },
+            create: {
               projectId: input.projectId,
               chapterNumber: input.chapterNumber,
-              targetPlatform: String(target),
+              targetPlatform: target,
               mode: 'manual_export',
+              status: 'pending',
+              payloadSnapshot: input.payloadSnapshot
+            },
+            update: {
               status: 'pending',
               payloadSnapshot: input.payloadSnapshot
             }
           })
         )
-      ];
+      ]);
 
-      return Promise.all(tasks);
+      return tx.publishTaskRecord.findMany({
+        where: {
+          projectId: input.projectId,
+          chapterNumber: input.chapterNumber
+        },
+        orderBy: [{ targetPlatform: 'asc' }, { mode: 'asc' }]
+      });
     });
   }
 

@@ -7,57 +7,61 @@ export class StoryStateRepository {
     outline: Record<string, unknown>;
     storyBible: string | null;
   }) {
-    await prisma.outlineRecord.create({
-      data: {
-        projectId: input.projectId,
-        payload: input.outline
-      }
-    });
+    return prisma.$transaction(async (tx) => {
+      await tx.outlineRecord.create({
+        data: {
+          projectId: input.projectId,
+          payload: input.outline
+        }
+      });
 
-    return prisma.storyState.upsert({
-      where: { projectId: input.projectId },
-      create: {
-        projectId: input.projectId,
-        storyBible: input.storyBible,
-        outline: input.outline,
-        volumePlans: [],
-        confirmedFacts: [],
-        openForeshadowing: [],
-        chapterSummaries: [],
-        currentPosition: { nextChapterNumber: 1, currentVolumeNumber: null }
-      },
-      update: {
-        storyBible: input.storyBible,
-        outline: input.outline
-      }
+      return tx.storyState.upsert({
+        where: { projectId: input.projectId },
+        create: {
+          projectId: input.projectId,
+          storyBible: input.storyBible,
+          outline: input.outline,
+          volumePlans: [],
+          confirmedFacts: [],
+          openForeshadowing: [],
+          chapterSummaries: [],
+          currentPosition: { nextChapterNumber: 1, currentVolumeNumber: null }
+        },
+        update: {
+          storyBible: input.storyBible,
+          outline: input.outline
+        }
+      });
     });
   }
 
   async saveVolumePlans(input: { projectId: string; plans: Array<Record<string, unknown>> }) {
-    await prisma.volumePlanRecord.createMany({
-      data: input.plans.map((payload, index) => ({
-        projectId: input.projectId,
-        volumeNumber: index + 1,
-        payload
-      }))
-    });
+    return prisma.$transaction(async (tx) => {
+      await tx.volumePlanRecord.createMany({
+        data: input.plans.map((payload, index) => ({
+          projectId: input.projectId,
+          volumeNumber: index + 1,
+          payload
+        }))
+      });
 
-    return prisma.storyState.upsert({
-      where: { projectId: input.projectId },
-      create: {
-        projectId: input.projectId,
-        storyBible: null,
-        outline: null,
-        volumePlans: input.plans,
-        confirmedFacts: [],
-        openForeshadowing: [],
-        chapterSummaries: [],
-        currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 1 }
-      },
-      update: {
-        volumePlans: input.plans,
-        currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 1 }
-      }
+      return tx.storyState.upsert({
+        where: { projectId: input.projectId },
+        create: {
+          projectId: input.projectId,
+          storyBible: null,
+          outline: null,
+          volumePlans: input.plans,
+          confirmedFacts: [],
+          openForeshadowing: [],
+          chapterSummaries: [],
+          currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 1 }
+        },
+        update: {
+          volumePlans: input.plans,
+          currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 1 }
+        }
+      });
     });
   }
 
@@ -106,43 +110,52 @@ export class StoryStateRepository {
     summary: string;
     nextChapterNumber: number;
   }) {
-    const nextSummary = {
-      chapterNumber: input.chapterNumber,
-      summary: input.summary
-    };
-    const currentPosition = {
-      nextChapterNumber: input.nextChapterNumber,
-      currentVolumeNumber: null
-    };
-    const existingState = await prisma.storyState.findUnique({
-      where: { projectId: input.projectId }
-    });
+    return prisma.$transaction(async (tx) => {
+      const nextSummary = {
+        chapterNumber: input.chapterNumber,
+        summary: input.summary
+      };
+      const existingState = await tx.storyState.findUnique({
+        where: { projectId: input.projectId }
+      });
+      const currentVolumeNumber =
+        existingState &&
+        existingState.currentPosition &&
+        typeof existingState.currentPosition === 'object' &&
+        'currentVolumeNumber' in existingState.currentPosition
+          ? existingState.currentPosition.currentVolumeNumber
+          : null;
+      const currentPosition = {
+        nextChapterNumber: input.nextChapterNumber,
+        currentVolumeNumber
+      };
 
-    if (!existingState) {
-      return prisma.storyState.create({
+      if (!existingState) {
+        return tx.storyState.create({
+          data: {
+            projectId: input.projectId,
+            storyBible: null,
+            outline: null,
+            volumePlans: [],
+            confirmedFacts: [],
+            openForeshadowing: [],
+            chapterSummaries: [nextSummary],
+            currentPosition
+          }
+        });
+      }
+
+      const chapterSummaries = Array.isArray(existingState.chapterSummaries)
+        ? [...existingState.chapterSummaries, nextSummary]
+        : [nextSummary];
+
+      return tx.storyState.update({
+        where: { projectId: input.projectId },
         data: {
-          projectId: input.projectId,
-          storyBible: null,
-          outline: null,
-          volumePlans: [],
-          confirmedFacts: [],
-          openForeshadowing: [],
-          chapterSummaries: [nextSummary],
+          chapterSummaries,
           currentPosition
         }
       });
-    }
-
-    const chapterSummaries = Array.isArray(existingState.chapterSummaries)
-      ? [...existingState.chapterSummaries, nextSummary]
-      : [nextSummary];
-
-    return prisma.storyState.update({
-      where: { projectId: input.projectId },
-      data: {
-        chapterSummaries,
-        currentPosition
-      }
     });
   }
 }

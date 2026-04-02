@@ -171,7 +171,8 @@ describe('decision session resolution routes', () => {
         replanRange: null,
         resumeFromChapter: null,
         invalidateExistingPlans: false
-      }
+      },
+      recoveryWork: null
     });
     expect(saveResolutionMock).toHaveBeenCalledWith({
       sessionId: 'session-123',
@@ -259,6 +260,17 @@ describe('decision session resolution routes', () => {
         },
         resumeFromChapter: 9,
         invalidateExistingPlans: true
+      },
+      recoveryWork: {
+        flowName: 'chapter-replan-flow',
+        status: 'queued',
+        steps: [
+          'load-recovery-task',
+          'invalidate-plans-in-window',
+          'set-chapters-needs-replan',
+          'enqueue-replan-window',
+          'mark-recovery-task-complete'
+        ]
       }
     });
     expect(saveResolutionMock).toHaveBeenCalledWith({

@@ -7,6 +7,11 @@ import {
   parseDecisionResolutionDraftPayload,
   parseDecisionResolutionPayload
 } from './validation';
+import {
+  chapterReplanFlow,
+  decisionSessionFlow,
+  enqueueWorkflow
+} from '../../../../packages/workflows/src';
 
 function toSessionSummary(record: {
   id: string;
@@ -47,6 +52,7 @@ function toSessionDetail(record: {
         message.createdAt instanceof Date ? message.createdAt.toISOString() : message.createdAt
     })),
     resolution: record.resolution,
+    currentDraftResolution: record.currentDraftResolution ?? null,
     confirmation: record.currentDraftResolution
       ? {
           required: true,
@@ -109,10 +115,7 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
             ? appendedMessage.createdAt.toISOString()
             : appendedMessage.createdAt
       },
-      assistantWork: {
-        status: 'queued',
-        taskType: 'generate_decision_reply'
-      }
+      assistantWork: enqueueWorkflow(decisionSessionFlow())
     });
   });
 
@@ -170,7 +173,11 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
       resolution: {
         sessionId,
         ...payload
-      }
+      },
+      recoveryWork:
+        payload.nextAction === 'replan_window'
+          ? enqueueWorkflow(chapterReplanFlow())
+          : null
     });
   });
 }

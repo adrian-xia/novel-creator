@@ -124,6 +124,9 @@ describe('decision session routes', () => {
         }
       ],
       resolution: null,
+      currentDraftResolution: {
+        resolutionType: 'accept_alternative'
+      },
       confirmation: {
         required: true,
         requestType: 'confirm_resolution'
@@ -202,8 +205,20 @@ describe('decision session routes', () => {
         createdAt: '2026-04-02T00:03:00.000Z'
       },
       assistantWork: {
+        flowName: 'decision-session-flow',
         status: 'queued',
-        taskType: 'generate_decision_reply'
+        steps: [
+          'append-human-message',
+          'load-decision-context',
+          'assemble-decision-conversation-context',
+          'run-decision-assistant',
+          'persist-assistant-message',
+          'generate-resolution-draft',
+          'persist-resolution',
+          'apply-resolution',
+          'invalidate-plans-in-window',
+          'enqueue-replan-window'
+        ]
       }
     });
     expect(appendMessageMock).toHaveBeenCalledWith({

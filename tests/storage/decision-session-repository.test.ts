@@ -9,7 +9,8 @@ const prisma = vi.hoisted(() => ({
     update: vi.fn()
   },
   decisionMessageRecord: {
-    create: vi.fn()
+    create: vi.fn(),
+    findFirst: vi.fn()
   },
   decisionResolutionRecord: {
     upsert: vi.fn()
@@ -113,6 +114,7 @@ describe('DecisionSessionRepository', () => {
     const messageCreateGate = new Promise<void>((resolve) => {
       releaseMessageCreate = resolve;
     });
+    prisma.decisionMessageRecord.findFirst.mockResolvedValue(null);
     prisma.decisionMessageRecord.create.mockImplementation(async ({ data }) => {
       await messageCreateGate;
       sessionState.messages = [...sessionState.messages, data];
@@ -180,6 +182,67 @@ describe('DecisionSessionRepository', () => {
     });
     expect(detail?.status).toBe('awaiting_resolution_confirmation');
     expect(sessionState.status).toBe('awaiting_resolution_confirmation');
+  });
+
+  it('owns message sequencing instead of trusting caller-provided sequence numbers', async () => {
+    prisma.decisionMessageRecord.findFirst
+      .mockResolvedValueOnce({ sequence: 0 })
+      .mockResolvedValueOnce({ sequence: 1 });
+    prisma.decisionMessageRecord.create.mockImplementation(async ({ data }) => {
+      sessionState.messages = [...sessionState.messages, data];
+      return { id: `message-${data.sequence}`, ...data };
+    });
+    prisma.decisionSessionRecord.update.mockImplementation(async ({ data }) => {
+      sessionState = {
+        ...sessionState,
+        ...data
+      };
+
+      return sessionState;
+    });
+
+    const { DecisionSessionRepository } = await import(
+      '../../packages/storage/src/repositories/decision-session-repository'
+    );
+    const repository = new DecisionSessionRepository();
+
+    await repository.appendMessage({
+      sessionId: sessionState.id,
+      sequence: 99,
+      role: 'human',
+      messageType: 'human',
+      content: 'first'
+    });
+
+    await repository.appendMessage({
+      sessionId: sessionState.id,
+      sequence: 99,
+      role: 'assistant',
+      messageType: 'assistant',
+      content: 'second'
+    });
+
+    expect(prisma.decisionMessageRecord.findFirst).toHaveBeenNthCalledWith(1, {
+      where: { sessionId: sessionState.id },
+      orderBy: { sequence: 'desc' },
+      select: { sequence: true }
+    });
+    expect(prisma.decisionMessageRecord.create).toHaveBeenNthCalledWith(1, {
+      data: expect.objectContaining({
+        sessionId: sessionState.id,
+        sequence: 1,
+        role: 'human',
+        messageType: 'human'
+      })
+    });
+    expect(prisma.decisionMessageRecord.create).toHaveBeenNthCalledWith(2, {
+      data: expect.objectContaining({
+        sessionId: sessionState.id,
+        sequence: 2,
+        role: 'assistant',
+        messageType: 'assistant'
+      })
+    });
   });
 
   it('persists full phase-4 resolution fields and marks the session resolved', async () => {

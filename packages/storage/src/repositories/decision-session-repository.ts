@@ -1,6 +1,8 @@
 import type { DecisionMessage, DecisionResolution } from '@novel-creator/domain';
 import { prisma } from '../client';
 
+const SERIALIZABLE_ISOLATION_LEVEL = 'Serializable' as const;
+
 function rehydrateResolution<T extends {
   replanRangeStartChapter?: number | null;
   replanRangeEndChapter?: number | null;
@@ -48,10 +50,17 @@ export class DecisionSessionRepository {
 
   async appendMessage(message: DecisionMessage) {
     return prisma.$transaction(async (tx) => {
+      const latestMessage = await tx.decisionMessageRecord.findFirst({
+        where: { sessionId: message.sessionId },
+        orderBy: { sequence: 'desc' },
+        select: { sequence: true }
+      });
+      const nextSequence = (latestMessage?.sequence ?? 0) + 1;
+
       const appendedMessage = await tx.decisionMessageRecord.create({
         data: {
           sessionId: message.sessionId,
-          sequence: message.sequence,
+          sequence: nextSequence,
           role: message.role,
           messageType: message.messageType,
           content: message.content,
@@ -67,6 +76,8 @@ export class DecisionSessionRepository {
       });
 
       return appendedMessage;
+    }, {
+      isolationLevel: SERIALIZABLE_ISOLATION_LEVEL
     });
   }
 

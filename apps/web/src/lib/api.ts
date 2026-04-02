@@ -8,6 +8,47 @@ export async function getJson<T>(input: RequestInfo | URL, init?: RequestInit): 
   return response.json() as Promise<T>;
 }
 
+const API_BASE_URL = 'http://localhost:3000';
+
+type DecisionQueueItem = {
+  sessionId: string;
+  projectId: string;
+  chapterNumber: number;
+  status: string;
+  triggerReason: string | null;
+  updatedAt: string;
+};
+
+type DecisionQueueResponse = {
+  items: DecisionQueueItem[];
+};
+
+type DecisionSessionMessage = {
+  sessionId?: string;
+  sequence?: number;
+  role: string;
+  messageType?: string;
+  content: string;
+  createdAt?: string;
+};
+
+type DecisionSessionDetail = {
+  sessionId: string;
+  projectId?: string;
+  chapterNumber?: number;
+  status?: string;
+  triggerReason?: string | null;
+  updatedAt?: string;
+  packet: Record<string, unknown>;
+  messages: DecisionSessionMessage[];
+  resolution: Record<string, unknown> | null;
+  currentDraftResolution?: Record<string, unknown> | null;
+  confirmation?: {
+    required: boolean;
+    requestType: string;
+  } | null;
+};
+
 export async function getProjectProductionDetail(projectId: string) {
   return {
     projectId,
@@ -26,16 +67,11 @@ export async function getProjectProductionDetail(projectId: string) {
 }
 
 export async function getDecisionQueue() {
-  return { items: [] as Array<Record<string, unknown>> };
+  return getJson<DecisionQueueResponse>(`${API_BASE_URL}/decision-sessions`);
 }
 
 export async function getDecisionSessionDetail(sessionId: string) {
-  return {
-    sessionId,
-    packet: { riskAnalysis: 'too early' },
-    messages: [{ role: 'assistant', content: 'delay the reveal' }],
-    resolution: null
-  };
+  return getJson<DecisionSessionDetail>(`${API_BASE_URL}/decision-sessions/${sessionId}`);
 }
 
 export async function getPublishCenter() {

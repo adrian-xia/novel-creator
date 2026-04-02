@@ -1,5 +1,5 @@
 import React from 'react';
-import { getProjectProductionDetail } from '../../../lib/api';
+import { getDecisionQueue, getProjectProductionDetail } from '../../../lib/api';
 
 export default async function ProjectDetailPage({
   params
@@ -7,7 +7,11 @@ export default async function ProjectDetailPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const detail = await getProjectProductionDetail(projectId);
+  const [detail, queue] = await Promise.all([
+    getProjectProductionDetail(projectId),
+    getDecisionQueue()
+  ]);
+  const openDecisions = queue.items.filter((item) => item.projectId === projectId);
 
   return (
     <main>
@@ -31,6 +35,26 @@ export default async function ProjectDetailPage({
       <section>
         <h2>Publish Profile</h2>
         <pre>{JSON.stringify(detail.publishProfile, null, 2)}</pre>
+      </section>
+      <section>
+        <h2>Open Decisions</h2>
+        {openDecisions.length === 0 ? (
+          <p>No open decisions for this project.</p>
+        ) : (
+          <ul>
+            {openDecisions.map((item) => (
+              <li key={item.sessionId}>
+                <a href={`/decision-sessions/${item.sessionId}`}>{item.sessionId}</a>
+                <div>Chapter: {item.chapterNumber}</div>
+                <div>Status: {item.status}</div>
+                <div>{item.triggerReason ?? 'No trigger reason provided.'}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p>
+          <a href="/decision-sessions">View full decision queue</a>
+        </p>
       </section>
       <nav>
         <a href="/decision-sessions">Decision Queue</a>

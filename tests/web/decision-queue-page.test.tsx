@@ -35,6 +35,7 @@ describe('DecisionQueuePage', () => {
     const Page = await DecisionQueuePage();
     const html = renderToString(Page);
 
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:3001/decision-sessions', undefined);
     expect(html).toContain('Decision Queue');
     expect(html).toContain('session-123');
     expect(html).toContain('Continuity conflict detected in chapter review.');

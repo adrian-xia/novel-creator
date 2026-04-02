@@ -9,6 +9,15 @@ export default async function DecisionSessionPage({
   const { sessionId } = await params;
   const detail = await getDecisionSessionDetail(sessionId);
 
+  if ('message' in detail) {
+    return (
+      <main>
+        <h1>Decision Session</h1>
+        <p>{detail.message}</p>
+      </main>
+    );
+  }
+
   return (
     <main>
       <h1>Decision Session</h1>

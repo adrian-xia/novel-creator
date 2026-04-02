@@ -73,11 +73,30 @@ describe('DecisionSessionPage', () => {
 
     const html = renderToString(Page);
 
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:3001/decision-sessions/session-1', undefined);
     expect(html).toContain('Decision Session');
     expect(html).toContain('Two scenes disagree on who knows the villain identity.');
     expect(html).toContain('Keep the reveal later and preserve the mentor scene.');
     expect(html).toContain('Drafted an alternative that delays the reveal to chapter 12.');
     expect(html).toContain('Delay the villain reveal to chapter 12.');
     expect(html).toContain('confirm_resolution');
+  });
+
+  it('renders a not-found state when the API returns a missing-session payload', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: 'Decision session not found'
+      })
+    });
+
+    const Page = await DecisionSessionPage({
+      params: Promise.resolve({ sessionId: 'missing-session' })
+    } as never);
+
+    const html = renderToString(Page);
+
+    expect(html).toContain('Decision Session');
+    expect(html).toContain('Decision session not found');
   });
 });

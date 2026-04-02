@@ -8,7 +8,7 @@ export async function getJson<T>(input: RequestInfo | URL, init?: RequestInit): 
   return response.json() as Promise<T>;
 }
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:3001';
 
 type DecisionQueueItem = {
   sessionId: string;
@@ -49,6 +49,10 @@ type DecisionSessionDetail = {
   } | null;
 };
 
+type DecisionSessionNotFound = {
+  message: string;
+};
+
 export async function getProjectProductionDetail(projectId: string) {
   return {
     projectId,
@@ -71,7 +75,9 @@ export async function getDecisionQueue() {
 }
 
 export async function getDecisionSessionDetail(sessionId: string) {
-  return getJson<DecisionSessionDetail>(`${API_BASE_URL}/decision-sessions/${sessionId}`);
+  return getJson<DecisionSessionDetail | DecisionSessionNotFound>(
+    `${API_BASE_URL}/decision-sessions/${sessionId}`
+  );
 }
 
 export async function getPublishCenter() {

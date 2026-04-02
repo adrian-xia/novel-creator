@@ -1,4 +1,5 @@
 export * from './novel-project';
+export * from './decision-recovery';
 export * from './prompt-config';
 export * from './provider-capacity';
 export * from './decision-session';

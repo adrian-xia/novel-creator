@@ -8,6 +8,8 @@ export type ChapterState =
   | 'needs_rewrite'
   | 'approved'
   | 'blocked_for_manual_decision'
+  | 'needs_replan'
+  | 'paused_by_decision'
   | 'failed';
 
 export interface StoryState {

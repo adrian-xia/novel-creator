@@ -11,21 +11,23 @@ export type ResolutionDraftInput = {
   storyFactsToApply?: string[];
   chapterPlanAdjustments?: string[];
   volumeImpact?: string | null;
+  replanRange?: {
+    startChapter: number;
+    endChapter: number;
+  } | null;
 };
 
-function deriveNextAction(input: ResolutionDraftInput['resolutionType']) {
-  switch (input) {
-    case 'accept_current':
-      return 'resume_review';
-    case 'pause_project':
-      return 'pause_project';
-    case 'accept_alternative':
-    case 'replan_required':
-      return 'replan_chapter';
+function deriveNextAction(input: ResolutionDraftInput) {
+  if (input.resolutionType === 'pause_project') {
+    return 'pause_project';
   }
+
+  return input.replanRange ? 'replan_window' : 'resume_current_chapter';
 }
 
 export function buildResolutionDraft(input: ResolutionDraftInput): DecisionResolution {
+  const replanRange = input.replanRange ?? null;
+
   return {
     sessionId: input.sessionId,
     resolutionType: input.resolutionType,
@@ -33,6 +35,9 @@ export function buildResolutionDraft(input: ResolutionDraftInput): DecisionResol
     storyFactsToApply: input.storyFactsToApply ?? [],
     chapterPlanAdjustments: input.chapterPlanAdjustments ?? [],
     volumeImpact: input.volumeImpact ?? null,
-    nextAction: deriveNextAction(input.resolutionType)
+    nextAction: deriveNextAction(input),
+    replanRange,
+    resumeFromChapter: replanRange ? replanRange.startChapter : null,
+    invalidateExistingPlans: Boolean(replanRange)
   };
 }

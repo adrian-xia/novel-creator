@@ -248,4 +248,36 @@ describe('DecisionSessionRepository', () => {
       })
     });
   });
+
+  it('rehydrates flattened resolution fields when reading session detail', async () => {
+    sessionState.resolution = {
+      sessionId: sessionState.id,
+      resolutionType: 'replan_required',
+      nextAction: 'replan_window',
+      replanRangeStartChapter: 8,
+      replanRangeEndChapter: 10,
+      resumeFromChapter: 8,
+      invalidateExistingPlans: true
+    };
+    prisma.decisionSessionRecord.findUnique.mockResolvedValue({
+      ...sessionState,
+      messages: [...sessionState.messages],
+      resolution: sessionState.resolution
+    });
+
+    const { DecisionSessionRepository } = await import(
+      '../../packages/storage/src/repositories/decision-session-repository'
+    );
+    const repository = new DecisionSessionRepository();
+
+    const detail = await repository.getSessionDetail(sessionState.id);
+
+    expect(detail?.resolution).toMatchObject({
+      sessionId: sessionState.id,
+      nextAction: 'replan_window',
+      replanRange: { startChapter: 8, endChapter: 10 },
+      resumeFromChapter: 8,
+      invalidateExistingPlans: true
+    });
+  });
 });

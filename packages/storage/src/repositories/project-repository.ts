@@ -24,6 +24,11 @@ export class ProjectRepository {
 
   async getDecisionQueue() {
     return prisma.decisionSessionRecord.findMany({
+      where: {
+        status: {
+          notIn: ['resolved', 'cancelled']
+        }
+      },
       orderBy: { updatedAt: 'desc' },
       include: {
         project: true

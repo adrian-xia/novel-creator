@@ -118,6 +118,11 @@ describe('project repository contracts', () => {
       }
     ]);
     expect(findDecisionQueueRecords).toHaveBeenCalledWith({
+      where: {
+        status: {
+          notIn: ['resolved', 'cancelled']
+        }
+      },
       orderBy: { updatedAt: 'desc' },
       include: {
         project: true

@@ -1,6 +1,28 @@
 import type { DecisionMessage, DecisionResolution } from '@novel-creator/domain';
 import { prisma } from '../client';
 
+function rehydrateResolution<T extends {
+  replanRangeStartChapter?: number | null;
+  replanRangeEndChapter?: number | null;
+  resumeFromChapter?: number | null;
+  invalidateExistingPlans?: boolean;
+} | null>(resolution: T) {
+  if (!resolution) {
+    return resolution;
+  }
+
+  const startChapter = resolution.replanRangeStartChapter ?? null;
+  const endChapter = resolution.replanRangeEndChapter ?? null;
+
+  return {
+    ...resolution,
+    replanRange:
+      startChapter !== null && endChapter !== null
+        ? { startChapter, endChapter }
+        : null
+  };
+}
+
 export class DecisionSessionRepository {
   async createSession(input: {
     projectId: string;
@@ -104,23 +126,37 @@ export class DecisionSessionRepository {
   }
 
   async listSessions() {
-    return prisma.decisionSessionRecord.findMany({
+    const sessions = await prisma.decisionSessionRecord.findMany({
       orderBy: { updatedAt: 'desc' },
       include: {
         messages: { orderBy: { sequence: 'asc' } },
         resolution: true
       }
     });
+
+    return sessions.map((session) => ({
+      ...session,
+      resolution: rehydrateResolution(session.resolution)
+    }));
   }
 
   async getSessionDetail(sessionId: string) {
-    return prisma.decisionSessionRecord.findUnique({
+    const session = await prisma.decisionSessionRecord.findUnique({
       where: { id: sessionId },
       include: {
         messages: { orderBy: { sequence: 'asc' } },
         resolution: true
       }
     });
+
+    if (!session) {
+      return null;
+    }
+
+    return {
+      ...session,
+      resolution: rehydrateResolution(session.resolution)
+    };
   }
 
   async cancelSession(sessionId: string) {

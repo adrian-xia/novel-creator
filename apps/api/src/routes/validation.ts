@@ -2,6 +2,34 @@ import type { JsonObject, JsonValue, PromptConfig, ProviderCapacity } from '../.
 
 type PromptPayload = Omit<PromptConfig, 'id'>;
 type ProviderCapacityPayload = Omit<ProviderCapacity, 'id'>;
+type DecisionMessagePayload = {
+  role: 'human' | 'assistant' | 'system';
+  messageType: 'human' | 'assistant' | 'system' | 'resolution_draft';
+  content: string;
+};
+type ReplanRangePayload = {
+  startChapter: number;
+  endChapter: number;
+};
+type DecisionResolutionPayload = {
+  resolutionType: 'accept_current' | 'accept_alternative' | 'replan_required' | 'pause_project';
+  decisionSummary: string;
+  storyFactsToApply: string[];
+  chapterPlanAdjustments: string[];
+  volumeImpact: string | null;
+  nextAction: 'resume_current_chapter' | 'replan_window' | 'pause_project';
+  replanRange: ReplanRangePayload | null;
+  resumeFromChapter: number | null;
+  invalidateExistingPlans: boolean;
+};
+type DecisionResolutionDraftPayload = {
+  resolutionType: 'accept_current' | 'accept_alternative' | 'replan_required' | 'pause_project';
+  decisionSummary: string;
+  storyFactsToApply: string[];
+  chapterPlanAdjustments: string[];
+  volumeImpact: string | null;
+  replanRange: ReplanRangePayload | null;
+};
 type PublishProfilePayload = {
   publishEnabled: boolean;
   autoPublishTargets: string[];
@@ -48,6 +76,32 @@ function isNumber(value: unknown): value is number {
 
 function isBoolean(value: unknown): value is boolean {
   return typeof value === 'boolean';
+}
+
+function isOneOf<T extends string>(value: unknown, allowed: readonly T[]): value is T {
+  return isString(value) && allowed.includes(value as T);
+}
+
+function parseReplanRange(value: unknown): ReplanRangePayload | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const { startChapter, endChapter } = value;
+
+  if (!isNumber(startChapter) || !isNumber(endChapter)) {
+    return null;
+  }
+
+  if (startChapter < 1 || endChapter < startChapter) {
+    return null;
+  }
+
+  return { startChapter, endChapter };
 }
 
 export function parsePromptPayload(value: unknown): PromptPayload | null {
@@ -141,6 +195,170 @@ export function parseProviderCapacityPayload(value: unknown): ProviderCapacityPa
     dailyBudget,
     enabled,
     priority
+  };
+}
+
+export function parseDecisionMessagePayload(value: unknown): DecisionMessagePayload | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const { role, messageType, content } = value;
+
+  if (
+    !isOneOf(role, ['human', 'assistant', 'system'] as const) ||
+    !isOneOf(messageType, ['human', 'assistant', 'system', 'resolution_draft'] as const) ||
+    !isString(content) ||
+    content.trim().length === 0
+  ) {
+    return null;
+  }
+
+  return { role, messageType, content };
+}
+
+export function parseDecisionResolutionDraftPayload(
+  value: unknown
+): DecisionResolutionDraftPayload | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const {
+    resolutionType,
+    decisionSummary,
+    storyFactsToApply,
+    chapterPlanAdjustments,
+    volumeImpact,
+    replanRange
+  } = value;
+
+  if (
+    !isOneOf(
+      resolutionType,
+      ['accept_current', 'accept_alternative', 'replan_required', 'pause_project'] as const
+    ) ||
+    !isString(decisionSummary) ||
+    decisionSummary.trim().length === 0 ||
+    !Array.isArray(storyFactsToApply) ||
+    !storyFactsToApply.every(isString) ||
+    !Array.isArray(chapterPlanAdjustments) ||
+    !chapterPlanAdjustments.every(isString)
+  ) {
+    return null;
+  }
+
+  if (volumeImpact !== null && volumeImpact !== undefined && !isString(volumeImpact)) {
+    return null;
+  }
+
+  const parsedReplanRange = parseReplanRange(replanRange);
+
+  if ((replanRange !== null && replanRange !== undefined && parsedReplanRange === null) ||
+      (resolutionType === 'replan_required' && parsedReplanRange === null)) {
+    return null;
+  }
+
+  return {
+    resolutionType,
+    decisionSummary,
+    storyFactsToApply,
+    chapterPlanAdjustments,
+    volumeImpact: volumeImpact ?? null,
+    replanRange: parsedReplanRange
+  };
+}
+
+export function parseDecisionResolutionPayload(value: unknown): DecisionResolutionPayload | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const {
+    resolutionType,
+    decisionSummary,
+    storyFactsToApply,
+    chapterPlanAdjustments,
+    volumeImpact,
+    nextAction,
+    replanRange,
+    resumeFromChapter,
+    invalidateExistingPlans
+  } = value;
+
+  if (
+    !isOneOf(
+      resolutionType,
+      ['accept_current', 'accept_alternative', 'replan_required', 'pause_project'] as const
+    ) ||
+    !isString(decisionSummary) ||
+    decisionSummary.trim().length === 0 ||
+    !Array.isArray(storyFactsToApply) ||
+    !storyFactsToApply.every(isString) ||
+    !Array.isArray(chapterPlanAdjustments) ||
+    !chapterPlanAdjustments.every(isString) ||
+    !isOneOf(nextAction, ['resume_current_chapter', 'replan_window', 'pause_project'] as const) ||
+    !isBoolean(invalidateExistingPlans)
+  ) {
+    return null;
+  }
+
+  if (volumeImpact !== null && volumeImpact !== undefined && !isString(volumeImpact)) {
+    return null;
+  }
+
+  if (resumeFromChapter !== null && resumeFromChapter !== undefined && !isNumber(resumeFromChapter)) {
+    return null;
+  }
+
+  const parsedReplanRange = parseReplanRange(replanRange);
+
+  if (replanRange !== null && replanRange !== undefined && parsedReplanRange === null) {
+    return null;
+  }
+
+  if (resolutionType === 'replan_required' && parsedReplanRange === null) {
+    return null;
+  }
+
+  if (nextAction === 'replan_window' && parsedReplanRange === null) {
+    return null;
+  }
+
+  if (nextAction !== 'replan_window' && parsedReplanRange !== null) {
+    return null;
+  }
+
+  if (nextAction === 'pause_project' && resolutionType !== 'pause_project') {
+    return null;
+  }
+
+  if (nextAction === 'resume_current_chapter' && resolutionType === 'pause_project') {
+    return null;
+  }
+
+  if (parsedReplanRange !== null && resumeFromChapter !== parsedReplanRange.startChapter) {
+    return null;
+  }
+
+  if (parsedReplanRange === null && resumeFromChapter !== null) {
+    return null;
+  }
+
+  if (invalidateExistingPlans !== (parsedReplanRange !== null)) {
+    return null;
+  }
+
+  return {
+    resolutionType,
+    decisionSummary,
+    storyFactsToApply,
+    chapterPlanAdjustments,
+    volumeImpact: volumeImpact ?? null,
+    nextAction,
+    replanRange: parsedReplanRange,
+    resumeFromChapter: resumeFromChapter ?? null,
+    invalidateExistingPlans
   };
 }
 

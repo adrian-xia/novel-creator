@@ -1,7 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 import { buildDecisionResolutionDraft } from '../../../../packages/agent-runtime/src/decision-resolution-draft';
-import { DecisionSessionRepository } from '../../../../packages/storage/src/repositories/decision-session-repository';
-import { ProjectRepository } from '../../../../packages/storage/src/repositories/project-repository';
 import {
   parseDecisionMessagePayload,
   parseDecisionResolutionDraftPayload,
@@ -62,11 +60,23 @@ function toSessionDetail(record: {
   };
 }
 
-export function registerDecisionSessionRoutes(app: FastifyInstance) {
-  const projectRepository = new ProjectRepository();
-  const decisionSessionRepository = new DecisionSessionRepository();
+async function getProjectRepository() {
+  const { ProjectRepository } = await import(
+    '../../../../packages/storage/src/repositories/project-repository'
+  );
+  return new ProjectRepository();
+}
 
+async function getDecisionSessionRepository() {
+  const { DecisionSessionRepository } = await import(
+    '../../../../packages/storage/src/repositories/decision-session-repository'
+  );
+  return new DecisionSessionRepository();
+}
+
+export function registerDecisionSessionRoutes(app: FastifyInstance) {
   app.get('/decision-sessions', async () => {
+    const projectRepository = await getProjectRepository();
     const sessions = await projectRepository.getDecisionQueue();
 
     return {
@@ -76,6 +86,7 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
 
   app.get('/decision-sessions/:sessionId', async (request) => {
     const { sessionId } = request.params as { sessionId: string };
+    const decisionSessionRepository = await getDecisionSessionRepository();
     const session = await decisionSessionRepository.getSessionDetail(sessionId);
 
     if (!session) {
@@ -89,6 +100,7 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
 
   app.post('/decision-sessions/:sessionId/messages', async (request, reply) => {
     const { sessionId } = request.params as { sessionId: string };
+    const decisionSessionRepository = await getDecisionSessionRepository();
     const payload = parseDecisionMessagePayload(request.body);
 
     if (!payload) {
@@ -121,6 +133,7 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
 
   app.post('/decision-sessions/:sessionId/generate-resolution', async (request, reply) => {
     const { sessionId } = request.params as { sessionId: string };
+    const decisionSessionRepository = await getDecisionSessionRepository();
     const payload = parseDecisionResolutionDraftPayload(request.body);
 
     if (!payload) {
@@ -154,6 +167,7 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
 
   app.post('/decision-sessions/:sessionId/resolve', async (request, reply) => {
     const { sessionId } = request.params as { sessionId: string };
+    const decisionSessionRepository = await getDecisionSessionRepository();
     const payload = parseDecisionResolutionPayload(request.body);
 
     if (!payload) {

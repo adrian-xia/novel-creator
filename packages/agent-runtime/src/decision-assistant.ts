@@ -28,6 +28,10 @@ function deriveNextAction(input: ResolutionDraftInput) {
 export function buildResolutionDraft(input: ResolutionDraftInput): DecisionResolution {
   const replanRange = input.replanRange ?? null;
 
+  if (input.resolutionType === 'replan_required' && !replanRange) {
+    throw new Error('replan_required requires a replanRange');
+  }
+
   return {
     sessionId: input.sessionId,
     resolutionType: input.resolutionType,

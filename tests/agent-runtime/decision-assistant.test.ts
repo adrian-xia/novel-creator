@@ -29,13 +29,13 @@ describe('buildResolutionDraft', () => {
       }).nextAction
     ).toBe('resume_current_chapter');
 
-    expect(
+    expect(() =>
       buildResolutionDraft({
         sessionId: 'session-3',
         resolutionType: 'replan_required',
         decisionSummary: 'chapter must be reworked'
-      }).nextAction
-    ).toBe('resume_current_chapter');
+      })
+    ).toThrowError('replan_required requires a replanRange');
 
     expect(
       buildResolutionDraft({

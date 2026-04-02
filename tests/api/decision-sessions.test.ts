@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getDecisionQueueMock = vi.fn();
 const getSessionDetailMock = vi.fn();
@@ -17,15 +17,15 @@ vi.mock('../../packages/storage/src/repositories/decision-session-repository', (
   }
 }));
 
-import { buildApp } from '../../apps/api/src/app';
+async function buildTestApp() {
+  const { buildApp } = await import('../../apps/api/src/app');
+  return buildApp();
+}
 
 describe('decision session routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(async () => {
-    await buildApp().close();
+    vi.resetModules();
   });
 
   it('returns a decision queue response', async () => {
@@ -44,7 +44,7 @@ describe('decision session routes', () => {
       }
     ]);
 
-    const app = buildApp();
+    const app = await buildTestApp();
     const response = await app.inject({
       method: 'GET',
       url: '/decision-sessions'
@@ -64,6 +64,7 @@ describe('decision session routes', () => {
       ]
     });
     expect(getDecisionQueueMock).toHaveBeenCalledTimes(1);
+    await app.close();
   });
 
   it('returns decision session detail with real route fields', async () => {
@@ -94,7 +95,7 @@ describe('decision session routes', () => {
       }
     });
 
-    const app = buildApp();
+    const app = await buildTestApp();
     const response = await app.inject({
       method: 'GET',
       url: '/decision-sessions/session-123'
@@ -123,19 +124,17 @@ describe('decision session routes', () => {
         }
       ],
       resolution: null,
-      currentDraftResolution: {
-        resolutionType: 'accept_alternative'
-      },
       confirmation: {
         required: true,
         requestType: 'confirm_resolution'
       }
     });
     expect(getSessionDetailMock).toHaveBeenCalledWith('session-123');
+    await app.close();
   });
 
   it('rejects an invalid decision message payload', async () => {
-    const app = buildApp();
+    const app = await buildTestApp();
     const response = await app.inject({
       method: 'POST',
       url: '/decision-sessions/session-123/messages',
@@ -149,10 +148,11 @@ describe('decision session routes', () => {
     expect(response.json()).toEqual({
       message: 'Invalid decision message payload'
     });
+    await app.close();
   });
 
   it('rejects non-human authored message payloads', async () => {
-    const app = buildApp();
+    const app = await buildTestApp();
     const response = await app.inject({
       method: 'POST',
       url: '/decision-sessions/session-123/messages',
@@ -167,6 +167,7 @@ describe('decision session routes', () => {
     expect(response.json()).toEqual({
       message: 'Invalid decision message payload'
     });
+    await app.close();
   });
 
   it('returns appended message and assistant work route shape for a valid message payload', async () => {
@@ -179,7 +180,7 @@ describe('decision session routes', () => {
       createdAt: new Date('2026-04-02T00:03:00.000Z')
     });
 
-    const app = buildApp();
+    const app = await buildTestApp();
     const response = await app.inject({
       method: 'POST',
       url: '/decision-sessions/session-123/messages',
@@ -212,5 +213,6 @@ describe('decision session routes', () => {
       messageType: 'human',
       content: 'Keep the reveal later and preserve the mentor scene.'
     });
+    await app.close();
   });
 });

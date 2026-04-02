@@ -22,7 +22,7 @@ function toSessionSummary(record: {
     chapterNumber: record.chapterNumber,
     status: record.status,
     triggerReason: record.triggerReason,
-    updatedAt: record.updatedAt
+    updatedAt: record.updatedAt instanceof Date ? record.updatedAt.toISOString() : record.updatedAt
   };
 }
 
@@ -41,9 +41,12 @@ function toSessionDetail(record: {
   return {
     ...toSessionSummary(record),
     packet: record.packet,
-    messages: record.messages,
+    messages: record.messages.map((message) => ({
+      ...message,
+      createdAt:
+        message.createdAt instanceof Date ? message.createdAt.toISOString() : message.createdAt
+    })),
     resolution: record.resolution,
-    currentDraftResolution: record.currentDraftResolution ?? null,
     confirmation: record.currentDraftResolution
       ? {
           required: true,
@@ -99,7 +102,13 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
     return reply.code(201).send({
       sessionId,
       status: 'awaiting_assistant_reply',
-      appendedMessage,
+      appendedMessage: {
+        ...appendedMessage,
+        createdAt:
+          appendedMessage.createdAt instanceof Date
+            ? appendedMessage.createdAt.toISOString()
+            : appendedMessage.createdAt
+      },
       assistantWork: {
         status: 'queued',
         taskType: 'generate_decision_reply'
@@ -127,11 +136,11 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
       replanRange: payload.replanRange
     });
 
-    await decisionSessionRepository.saveDraftResolution(sessionId, resolution);
+    const session = await decisionSessionRepository.saveDraftResolution(sessionId, resolution);
 
     return reply.code(200).send({
       sessionId,
-      status: 'awaiting_resolution_confirmation',
+      status: session.status,
       resolution,
       confirmation: {
         required: true,
@@ -150,14 +159,14 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
       });
     }
 
-    await decisionSessionRepository.saveResolution({
+    const session = await decisionSessionRepository.saveResolution({
       sessionId,
       ...payload
     });
 
     return reply.code(200).send({
       sessionId,
-      status: 'resolved',
+      status: session.status,
       resolution: {
         sessionId,
         ...payload

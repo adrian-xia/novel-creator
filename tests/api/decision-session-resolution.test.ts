@@ -10,11 +10,15 @@ vi.mock('../../packages/storage/src/repositories/decision-session-repository', (
   }
 }));
 
-import { buildApp } from '../../apps/api/src/app';
+async function buildTestApp() {
+  const { buildApp } = await import('../../apps/api/src/app');
+  return buildApp();
+}
 
 describe('decision session resolution routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules();
   });
 
   it('generates a structured resolution draft for confirmation', async () => {
@@ -23,7 +27,7 @@ describe('decision session resolution routes', () => {
       status: 'awaiting_resolution_confirmation'
     });
 
-    const app = buildApp();
+    const app = await buildTestApp();
 
     const response = await app.inject({
       method: 'POST',
@@ -80,10 +84,11 @@ describe('decision session resolution routes', () => {
       resumeFromChapter: 8,
       invalidateExistingPlans: true
     });
+    await app.close();
   });
 
   it('rejects an invalid resolution draft payload', async () => {
-    const app = buildApp();
+    const app = await buildTestApp();
 
     const response = await app.inject({
       method: 'POST',
@@ -98,10 +103,11 @@ describe('decision session resolution routes', () => {
     expect(response.json()).toEqual({
       message: 'Invalid decision resolution payload'
     });
+    await app.close();
   });
 
   it('rejects pause_project drafts that carry replan metadata', async () => {
-    const app = buildApp();
+    const app = await buildTestApp();
 
     const response = await app.inject({
       method: 'POST',
@@ -123,6 +129,7 @@ describe('decision session resolution routes', () => {
     expect(response.json()).toEqual({
       message: 'Invalid decision resolution payload'
     });
+    await app.close();
   });
 
   it('accepts a confirmed resolution payload and returns the resolved route shape', async () => {
@@ -131,7 +138,7 @@ describe('decision session resolution routes', () => {
       status: 'resolved'
     });
 
-    const app = buildApp();
+    const app = await buildTestApp();
 
     const response = await app.inject({
       method: 'POST',
@@ -178,10 +185,11 @@ describe('decision session resolution routes', () => {
       resumeFromChapter: null,
       invalidateExistingPlans: false
     });
+    await app.close();
   });
 
   it('rejects an invalid confirmed resolution payload', async () => {
-    const app = buildApp();
+    const app = await buildTestApp();
 
     const response = await app.inject({
       method: 'POST',
@@ -203,6 +211,7 @@ describe('decision session resolution routes', () => {
     expect(response.json()).toEqual({
       message: 'Invalid decision resolution payload'
     });
+    await app.close();
   });
 
   it('accepts a replan resolution when resumeFromChapter is within the replan range', async () => {
@@ -211,7 +220,7 @@ describe('decision session resolution routes', () => {
       status: 'resolved'
     });
 
-    const app = buildApp();
+    const app = await buildTestApp();
 
     const response = await app.inject({
       method: 'POST',
@@ -267,5 +276,6 @@ describe('decision session resolution routes', () => {
       resumeFromChapter: 9,
       invalidateExistingPlans: true
     });
+    await app.close();
   });
 });

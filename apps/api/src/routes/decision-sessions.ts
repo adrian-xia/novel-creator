@@ -68,8 +68,8 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
       appendedMessage: {
         sessionId,
         sequence: 2,
-        role: payload.role,
-        messageType: payload.messageType,
+        role: 'human',
+        messageType: 'human',
         content: payload.content,
         createdAt: baseTimestamp
       },

@@ -3,8 +3,6 @@ import type { JsonObject, JsonValue, PromptConfig, ProviderCapacity } from '../.
 type PromptPayload = Omit<PromptConfig, 'id'>;
 type ProviderCapacityPayload = Omit<ProviderCapacity, 'id'>;
 type DecisionMessagePayload = {
-  role: 'human' | 'assistant' | 'system';
-  messageType: 'human' | 'assistant' | 'system' | 'resolution_draft';
   content: string;
 };
 type ReplanRangePayload = {
@@ -206,15 +204,20 @@ export function parseDecisionMessagePayload(value: unknown): DecisionMessagePayl
   const { role, messageType, content } = value;
 
   if (
-    !isOneOf(role, ['human', 'assistant', 'system'] as const) ||
-    !isOneOf(messageType, ['human', 'assistant', 'system', 'resolution_draft'] as const) ||
     !isString(content) ||
     content.trim().length === 0
   ) {
     return null;
   }
 
-  return { role, messageType, content };
+  if (
+    (role !== undefined && role !== 'human') ||
+    (messageType !== undefined && messageType !== 'human')
+  ) {
+    return null;
+  }
+
+  return { content };
 }
 
 export function parseDecisionResolutionDraftPayload(

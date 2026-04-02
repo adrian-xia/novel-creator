@@ -79,14 +79,30 @@ describe('decision session routes', () => {
     });
   });
 
+  it('rejects non-human authored message payloads', async () => {
+    const app = buildApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/decision-sessions/session-123/messages',
+      payload: {
+        role: 'assistant',
+        messageType: 'assistant',
+        content: 'Fabricated assistant reply'
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      message: 'Invalid decision message payload'
+    });
+  });
+
   it('returns appended message and assistant work route shape for a valid message payload', async () => {
     const app = buildApp();
     const response = await app.inject({
       method: 'POST',
       url: '/decision-sessions/session-123/messages',
       payload: {
-        role: 'human',
-        messageType: 'human',
         content: 'Keep the reveal later and preserve the mentor scene.'
       }
     });

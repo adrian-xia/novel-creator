@@ -109,7 +109,7 @@ It does not cover real platform publishing, connector integrations, or docker co
 - Modify: `packages/domain/src/index.ts`
 - Test: `tests/storage/phase-4-decision-types.test.ts`
 
-- [ ] **Step 1: Write the failing type contract test**
+- [x] **Step 1: Write the failing type contract test**
 
 ```ts
 // tests/storage/phase-4-decision-types.test.ts
@@ -197,12 +197,12 @@ describe('phase 4 decision contracts', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
-Run: `corepack pnpm vitest run tests/storage/phase-4-decision-types.test.ts`
+Run: `corepack pnpm exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --strict --esModuleInterop --skipLibCheck --resolveJsonModule --baseUrl . tests/storage/phase-4-decision-types.test.ts`
 Expected: FAIL with missing exports or mismatched type shapes
 
-- [ ] **Step 3: Add the new domain contracts**
+- [x] **Step 3: Add the new domain contracts**
 
 ```ts
 // packages/domain/src/decision-recovery.ts
@@ -275,12 +275,12 @@ export type ChapterState =
 export * from './decision-recovery';
 ```
 
-- [ ] **Step 4: Run the type test again**
+- [x] **Step 4: Run the type test again**
 
-Run: `corepack pnpm vitest run tests/storage/phase-4-decision-types.test.ts`
+Run: `corepack pnpm exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --strict --esModuleInterop --skipLibCheck --resolveJsonModule --baseUrl . tests/storage/phase-4-decision-types.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/domain/src/decision-session.ts packages/domain/src/decision-recovery.ts packages/domain/src/story-state.ts packages/domain/src/index.ts tests/storage/phase-4-decision-types.test.ts
@@ -298,7 +298,7 @@ git commit -m "feat: extend decision session domain contracts"
 - Test: `tests/storage/decision-session-repository.test.ts`
 - Test: `tests/storage/decision-recovery-repository.test.ts`
 
-- [ ] **Step 1: Write the failing persistence tests**
+- [x] **Step 1: Write the failing persistence tests**
 
 ```ts
 // tests/storage/decision-recovery-repository.test.ts
@@ -359,12 +359,12 @@ it('persists sequenced messages and stores a draft resolution on the session', a
 });
 ```
 
-- [ ] **Step 2: Run the persistence tests to verify they fail**
+- [x] **Step 2: Run the persistence tests to verify they fail**
 
 Run: `corepack pnpm vitest run tests/storage/decision-session-repository.test.ts tests/storage/decision-recovery-repository.test.ts`
 Expected: FAIL with missing schema fields or repository methods
 
-- [ ] **Step 3: Extend the Prisma schema**
+- [x] **Step 3: Extend the Prisma schema**
 
 ```prisma
 model DecisionSessionRecord {
@@ -412,7 +412,7 @@ model ChapterRecoveryTaskRecord {
 }
 ```
 
-- [ ] **Step 4: Implement the repository methods**
+- [x] **Step 4: Implement the repository methods**
 
 ```ts
 // packages/storage/src/repositories/decision-recovery-repository.ts
@@ -449,12 +449,12 @@ async saveDraftResolution(sessionId: string, draft: Record<string, unknown>) {
 }
 ```
 
-- [ ] **Step 5: Run the persistence tests again**
+- [x] **Step 5: Run the persistence tests again**
 
 Run: `corepack pnpm vitest run tests/storage/decision-session-repository.test.ts tests/storage/decision-recovery-repository.test.ts tests/storage/story-state-repository.test.ts`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/storage/prisma/schema.prisma packages/storage/src/repositories/decision-session-repository.ts packages/storage/src/repositories/decision-recovery-repository.ts packages/storage/src/repositories/story-state-repository.ts packages/storage/src/repositories/project-repository.ts tests/storage/decision-session-repository.test.ts tests/storage/decision-recovery-repository.test.ts
@@ -473,7 +473,7 @@ git commit -m "feat: persist multi-turn decision sessions"
 - Test: `tests/agent-runtime/decision-conversation.test.ts`
 - Test: `tests/agent-runtime/decision-resolution-draft.test.ts`
 
-- [ ] **Step 1: Write the failing helper tests**
+- [x] **Step 1: Write the failing helper tests**
 
 ```ts
 // tests/agent-runtime/decision-conversation.test.ts
@@ -519,12 +519,12 @@ describe('buildResolutionDraftFromConversation', () => {
 });
 ```
 
-- [ ] **Step 2: Run the helper tests to verify they fail**
+- [x] **Step 2: Run the helper tests to verify they fail**
 
 Run: `corepack pnpm vitest run tests/agent-runtime/decision-conversation.test.ts tests/agent-runtime/decision-resolution-draft.test.ts`
 Expected: FAIL with missing modules or exports
 
-- [ ] **Step 3: Implement the helper modules**
+- [x] **Step 3: Implement the helper modules**
 
 ```ts
 // packages/agent-runtime/src/decision-conversation.ts
@@ -573,12 +573,12 @@ export function buildResolutionDraftFromConversation(input: {
 }
 ```
 
-- [ ] **Step 4: Run the helper tests again**
+- [x] **Step 4: Run the helper tests again**
 
 Run: `corepack pnpm vitest run tests/agent-runtime/decision-conversation.test.ts tests/agent-runtime/decision-resolution-draft.test.ts tests/agent-runtime/decision-assistant.test.ts tests/agent-runtime/decision-packet.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/agent-runtime/src/decision-conversation.ts packages/agent-runtime/src/decision-resolution-draft.ts packages/agent-runtime/src/context-assembler.ts packages/agent-runtime/src/decision-packet.ts packages/agent-runtime/src/decision-assistant.ts packages/agent-runtime/src/index.ts tests/agent-runtime/decision-conversation.test.ts tests/agent-runtime/decision-resolution-draft.test.ts
@@ -596,7 +596,7 @@ git commit -m "feat: assemble decision conversation context"
 - Test: `tests/workflows/chapter-replan-flow.test.ts`
 - Test: `tests/workflows/decision-session-flow.test.ts`
 
-- [ ] **Step 1: Write the failing flow tests**
+- [x] **Step 1: Write the failing flow tests**
 
 ```ts
 // tests/workflows/chapter-replan-flow.test.ts
@@ -617,12 +617,12 @@ describe('chapterReplanFlow', () => {
 });
 ```
 
-- [ ] **Step 2: Run the flow tests to verify they fail**
+- [x] **Step 2: Run the flow tests to verify they fail**
 
 Run: `corepack pnpm vitest run tests/workflows/chapter-replan-flow.test.ts tests/workflows/decision-session-flow.test.ts`
 Expected: FAIL with missing module or mismatched steps
 
-- [ ] **Step 3: Implement the recovery flow definitions**
+- [x] **Step 3: Implement the recovery flow definitions**
 
 ```ts
 // packages/workflows/src/chapter-replan-flow.ts
@@ -663,7 +663,7 @@ export function decisionSessionFlow(): WorkflowDefinition {
 }
 ```
 
-- [ ] **Step 4: Wire the worker routing**
+- [x] **Step 4: Wire the worker routing**
 
 ```ts
 // apps/worker/src/jobs/workflow-job.ts
@@ -677,12 +677,12 @@ const flowMap = {
 } as const;
 ```
 
-- [ ] **Step 5: Run the workflow tests again**
+- [x] **Step 5: Run the workflow tests again**
 
 Run: `corepack pnpm vitest run tests/workflows/chapter-replan-flow.test.ts tests/workflows/decision-session-flow.test.ts tests/worker/workflow-job.test.ts`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/workflows/src/chapter-replan-flow.ts packages/workflows/src/decision-session-flow.ts packages/workflows/src/review-rewrite-flow.ts packages/workflows/src/index.ts apps/worker/src/jobs/workflow-job.ts tests/workflows/chapter-replan-flow.test.ts tests/workflows/decision-session-flow.test.ts tests/worker/workflow-job.test.ts
@@ -698,7 +698,7 @@ git commit -m "feat: add decision recovery workflow definitions"
 - Test: `tests/api/decision-sessions.test.ts`
 - Test: `tests/api/decision-session-resolution.test.ts`
 
-- [ ] **Step 1: Write the failing API tests**
+- [x] **Step 1: Write the failing API tests**
 
 ```ts
 // tests/api/decision-session-resolution.test.ts
@@ -747,12 +747,12 @@ describe('decision session resolution routes', () => {
 });
 ```
 
-- [ ] **Step 2: Run the API tests to verify they fail**
+- [x] **Step 2: Run the API tests to verify they fail**
 
 Run: `corepack pnpm vitest run tests/api/decision-sessions.test.ts tests/api/decision-session-resolution.test.ts`
 Expected: FAIL with missing routes or invalid payload parsing
 
-- [ ] **Step 3: Add decision payload validation**
+- [x] **Step 3: Add decision payload validation**
 
 ```ts
 // apps/api/src/routes/validation.ts
@@ -773,7 +773,7 @@ export function parseDecisionResolutionPayload(value: unknown) {
 }
 ```
 
-- [ ] **Step 4: Implement the real route shapes**
+- [x] **Step 4: Implement the real route shapes**
 
 ```ts
 // apps/api/src/routes/decision-sessions.ts
@@ -800,12 +800,12 @@ app.post('/decision-sessions/:sessionId/resolve', async (request, reply) => {
 });
 ```
 
-- [ ] **Step 5: Run the API tests again**
+- [x] **Step 5: Run the API tests again**
 
 Run: `corepack pnpm vitest run tests/api/decision-sessions.test.ts tests/api/decision-session-resolution.test.ts`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/routes/decision-sessions.ts apps/api/src/routes/validation.ts tests/api/decision-sessions.test.ts tests/api/decision-session-resolution.test.ts
@@ -822,7 +822,7 @@ git commit -m "feat: add decision resolution api routes"
 - Test: `tests/web/decision-queue-page.test.tsx`
 - Test: `tests/web/decision-session-page.test.tsx`
 
-- [ ] **Step 1: Write the failing page tests**
+- [x] **Step 1: Write the failing page tests**
 
 ```tsx
 // tests/web/decision-queue-page.test.tsx
@@ -841,12 +841,12 @@ describe('DecisionQueuePage', () => {
 });
 ```
 
-- [ ] **Step 2: Run the page tests to verify they fail**
+- [x] **Step 2: Run the page tests to verify they fail**
 
 Run: `corepack pnpm vitest run tests/web/decision-queue-page.test.tsx tests/web/decision-session-page.test.tsx`
 Expected: FAIL with missing live fields or outdated page output
 
-- [ ] **Step 3: Replace placeholder web helpers**
+- [x] **Step 3: Replace placeholder web helpers**
 
 ```ts
 // apps/web/src/lib/api.ts
@@ -865,7 +865,7 @@ export async function getDecisionSessionDetail(sessionId: string) {
 }
 ```
 
-- [ ] **Step 4: Upgrade the pages**
+- [x] **Step 4: Upgrade the pages**
 
 ```tsx
 // apps/web/src/app/decision-sessions/[sessionId]/page.tsx
@@ -883,12 +883,12 @@ export async function getDecisionSessionDetail(sessionId: string) {
 </section>
 ```
 
-- [ ] **Step 5: Run the page tests again**
+- [x] **Step 5: Run the page tests again**
 
 Run: `corepack pnpm vitest run tests/web/decision-queue-page.test.tsx tests/web/decision-session-page.test.tsx tests/web/project-detail.test.tsx`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/src/lib/api.ts apps/web/src/app/decision-sessions/page.tsx apps/web/src/app/decision-sessions/[sessionId]/page.tsx apps/web/src/app/projects/[projectId]/page.tsx tests/web/decision-queue-page.test.tsx tests/web/decision-session-page.test.tsx tests/web/project-detail.test.tsx
@@ -901,7 +901,7 @@ git commit -m "feat: upgrade decision session control panel"
 - Modify: `README.md`
 - Test: `tests/e2e/phase-4-decision-session-smoke.test.ts`
 
-- [ ] **Step 1: Write the failing Phase 4 smoke test**
+- [x] **Step 1: Write the failing Phase 4 smoke test**
 
 ```ts
 // tests/e2e/phase-4-decision-session-smoke.test.ts
@@ -935,12 +935,12 @@ describe('phase 4 decision-session smoke', () => {
 });
 ```
 
-- [ ] **Step 2: Run the smoke test to verify it fails**
+- [x] **Step 2: Run the smoke test to verify it fails**
 
 Run: `corepack pnpm vitest run tests/e2e/phase-4-decision-session-smoke.test.ts`
 Expected: FAIL until the new recovery flow and resolution route are in place
 
-- [ ] **Step 3: Update README and finalize the smoke test**
+- [x] **Step 3: Update README and finalize the smoke test**
 
 ```md
 ## Phase 4 Expected Behavior
@@ -951,17 +951,17 @@ Expected: FAIL until the new recovery flow and resolution route are in place
 - recovery tasks can invalidate existing plans and resume from a specific chapter
 ```
 
-- [ ] **Step 4: Run the focused Phase 4 suite**
+- [x] **Step 4: Run the focused Phase 4 suite**
 
 Run: `corepack pnpm vitest run tests/storage/phase-4-decision-types.test.ts tests/storage/decision-session-repository.test.ts tests/storage/decision-recovery-repository.test.ts tests/agent-runtime/decision-conversation.test.ts tests/agent-runtime/decision-resolution-draft.test.ts tests/api/decision-sessions.test.ts tests/api/decision-session-resolution.test.ts tests/web/decision-queue-page.test.tsx tests/web/decision-session-page.test.tsx tests/workflows/chapter-replan-flow.test.ts tests/e2e/phase-4-decision-session-smoke.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Run the full regression suite**
+- [x] **Step 5: Run the full regression suite**
 
 Run: `corepack pnpm vitest run tests/workspace tests/storage tests/llm-gateway tests/agent-runtime tests/api tests/workflows tests/web tests/e2e`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add README.md tests/e2e/phase-4-decision-session-smoke.test.ts

@@ -6,18 +6,50 @@ import {
   parseDecisionResolutionPayload
 } from './validation';
 
+const baseTimestamp = '2026-04-02T00:00:00.000Z';
+
+function buildSessionSummary(sessionId: string) {
+  return {
+    sessionId,
+    projectId: 'project-1',
+    chapterNumber: 8,
+    status: 'awaiting_human_input' as const,
+    triggerReason: 'Continuity conflict detected in chapter review.',
+    updatedAt: baseTimestamp
+  };
+}
+
+function buildSessionDetail(sessionId: string) {
+  return {
+    ...buildSessionSummary(sessionId),
+    packet: {
+      reviewOutcomeId: 'review-456',
+      summary: 'Two scenes disagree on who knows the villain identity.'
+    },
+    messages: [
+      {
+        sessionId,
+        sequence: 1,
+        role: 'system' as const,
+        messageType: 'system' as const,
+        content: 'Decision session opened for chapter 8 continuity review.',
+        createdAt: baseTimestamp
+      }
+    ],
+    resolution: null,
+    confirmation: null
+  };
+}
+
 export function registerDecisionSessionRoutes(app: FastifyInstance) {
-  app.get('/decision-sessions', async () => ({ items: [] }));
+  app.get('/decision-sessions', async () => ({
+    items: [buildSessionSummary('session-123')]
+  }));
 
   app.get('/decision-sessions/:sessionId', async (request) => {
     const { sessionId } = request.params as { sessionId: string };
 
-    return {
-      sessionId,
-      packet: null,
-      messages: [],
-      resolution: null
-    };
+    return buildSessionDetail(sessionId);
   });
 
   app.post('/decision-sessions/:sessionId/messages', async (request, reply) => {
@@ -32,7 +64,19 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
 
     return reply.code(201).send({
       sessionId,
-      status: 'queued_assistant_reply'
+      status: 'awaiting_assistant_reply',
+      appendedMessage: {
+        sessionId,
+        sequence: 2,
+        role: payload.role,
+        messageType: payload.messageType,
+        content: payload.content,
+        createdAt: baseTimestamp
+      },
+      assistantWork: {
+        status: 'queued',
+        taskType: 'generate_decision_reply'
+      }
     });
   });
 

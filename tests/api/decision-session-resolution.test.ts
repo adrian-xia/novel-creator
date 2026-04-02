@@ -65,6 +65,31 @@ describe('decision session resolution routes', () => {
     });
   });
 
+  it('rejects pause_project drafts that carry replan metadata', async () => {
+    const app = buildApp();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/decision-sessions/session-123/generate-resolution',
+      payload: {
+        resolutionType: 'pause_project',
+        decisionSummary: 'Pause until editorial review is complete.',
+        storyFactsToApply: [],
+        chapterPlanAdjustments: [],
+        volumeImpact: null,
+        replanRange: {
+          startChapter: 8,
+          endChapter: 10
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      message: 'Invalid decision resolution payload'
+    });
+  });
+
   it('accepts a confirmed resolution payload and returns the resolved route shape', async () => {
     const app = buildApp();
 
@@ -125,6 +150,50 @@ describe('decision session resolution routes', () => {
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({
       message: 'Invalid decision resolution payload'
+    });
+  });
+
+  it('accepts a replan resolution when resumeFromChapter is within the replan range', async () => {
+    const app = buildApp();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/decision-sessions/session-123/resolve',
+      payload: {
+        resolutionType: 'replan_required',
+        decisionSummary: 'Rework the window and resume after the revised setup.',
+        storyFactsToApply: ['The reveal remains delayed.'],
+        chapterPlanAdjustments: ['Rebuild chapters 8 to 10 around the new midpoint.'],
+        volumeImpact: null,
+        nextAction: 'replan_window',
+        replanRange: {
+          startChapter: 8,
+          endChapter: 10
+        },
+        resumeFromChapter: 9,
+        invalidateExistingPlans: true
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      sessionId: 'session-123',
+      status: 'resolved',
+      resolution: {
+        sessionId: 'session-123',
+        resolutionType: 'replan_required',
+        decisionSummary: 'Rework the window and resume after the revised setup.',
+        storyFactsToApply: ['The reveal remains delayed.'],
+        chapterPlanAdjustments: ['Rebuild chapters 8 to 10 around the new midpoint.'],
+        volumeImpact: null,
+        nextAction: 'replan_window',
+        replanRange: {
+          startChapter: 8,
+          endChapter: 10
+        },
+        resumeFromChapter: 9,
+        invalidateExistingPlans: true
+      }
     });
   });
 });

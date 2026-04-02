@@ -259,6 +259,10 @@ export function parseDecisionResolutionDraftPayload(
     return null;
   }
 
+  if (resolutionType === 'pause_project' && parsedReplanRange !== null) {
+    return null;
+  }
+
   return {
     resolutionType,
     decisionSummary,
@@ -337,7 +341,12 @@ export function parseDecisionResolutionPayload(value: unknown): DecisionResoluti
     return null;
   }
 
-  if (parsedReplanRange !== null && resumeFromChapter !== parsedReplanRange.startChapter) {
+  if (
+    parsedReplanRange !== null &&
+    (resumeFromChapter === null ||
+      resumeFromChapter < parsedReplanRange.startChapter ||
+      resumeFromChapter > parsedReplanRange.endChapter)
+  ) {
     return null;
   }
 

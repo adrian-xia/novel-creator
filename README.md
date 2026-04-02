@@ -30,3 +30,10 @@
 - manual export tasks support ready and confirm transitions
 - worker records workflow instrumentation through workflow-run execution
 - internal control panel includes decision queue, publish center, and workflow run pages
+
+## Phase 4 Expected Behavior
+
+- blocked review outcomes open a real multi-turn decision session
+- decision-session messages persist and can generate structured draft resolutions
+- confirmed resolutions can define a dynamic replan window
+- recovery tasks can invalidate existing plans and resume from a specific chapter

@@ -1,55 +1,81 @@
 import type { FastifyInstance } from 'fastify';
 import { buildDecisionResolutionDraft } from '../../../../packages/agent-runtime/src/decision-resolution-draft';
+import { DecisionSessionRepository } from '../../../../packages/storage/src/repositories/decision-session-repository';
+import { ProjectRepository } from '../../../../packages/storage/src/repositories/project-repository';
 import {
   parseDecisionMessagePayload,
   parseDecisionResolutionDraftPayload,
   parseDecisionResolutionPayload
 } from './validation';
 
-const baseTimestamp = '2026-04-02T00:00:00.000Z';
-
-function buildSessionSummary(sessionId: string) {
+function toSessionSummary(record: {
+  id: string;
+  projectId: string;
+  chapterNumber: number;
+  status: string;
+  triggerReason: string | null;
+  updatedAt: Date | string;
+}) {
   return {
-    sessionId,
-    projectId: 'project-1',
-    chapterNumber: 8,
-    status: 'awaiting_human_input' as const,
-    triggerReason: 'Continuity conflict detected in chapter review.',
-    updatedAt: baseTimestamp
+    sessionId: record.id,
+    projectId: record.projectId,
+    chapterNumber: record.chapterNumber,
+    status: record.status,
+    triggerReason: record.triggerReason,
+    updatedAt: record.updatedAt
   };
 }
 
-function buildSessionDetail(sessionId: string) {
+function toSessionDetail(record: {
+  id: string;
+  projectId: string;
+  chapterNumber: number;
+  status: string;
+  triggerReason: string | null;
+  updatedAt: Date | string;
+  packet: Record<string, unknown>;
+  messages: Array<Record<string, unknown>>;
+  resolution: Record<string, unknown> | null;
+  currentDraftResolution?: Record<string, unknown> | null;
+}) {
   return {
-    ...buildSessionSummary(sessionId),
-    packet: {
-      reviewOutcomeId: 'review-456',
-      summary: 'Two scenes disagree on who knows the villain identity.'
-    },
-    messages: [
-      {
-        sessionId,
-        sequence: 1,
-        role: 'system' as const,
-        messageType: 'system' as const,
-        content: 'Decision session opened for chapter 8 continuity review.',
-        createdAt: baseTimestamp
-      }
-    ],
-    resolution: null,
-    confirmation: null
+    ...toSessionSummary(record),
+    packet: record.packet,
+    messages: record.messages,
+    resolution: record.resolution,
+    currentDraftResolution: record.currentDraftResolution ?? null,
+    confirmation: record.currentDraftResolution
+      ? {
+          required: true,
+          requestType: 'confirm_resolution' as const
+        }
+      : null
   };
 }
 
 export function registerDecisionSessionRoutes(app: FastifyInstance) {
-  app.get('/decision-sessions', async () => ({
-    items: [buildSessionSummary('session-123')]
-  }));
+  const projectRepository = new ProjectRepository();
+  const decisionSessionRepository = new DecisionSessionRepository();
+
+  app.get('/decision-sessions', async () => {
+    const sessions = await projectRepository.getDecisionQueue();
+
+    return {
+      items: sessions.map(toSessionSummary)
+    };
+  });
 
   app.get('/decision-sessions/:sessionId', async (request) => {
     const { sessionId } = request.params as { sessionId: string };
+    const session = await decisionSessionRepository.getSessionDetail(sessionId);
 
-    return buildSessionDetail(sessionId);
+    if (!session) {
+      return {
+        message: 'Decision session not found'
+      };
+    }
+
+    return toSessionDetail(session as never);
   });
 
   app.post('/decision-sessions/:sessionId/messages', async (request, reply) => {
@@ -62,17 +88,18 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
       });
     }
 
+    const appendedMessage = await decisionSessionRepository.appendMessage({
+      sessionId,
+      sequence: 0,
+      role: 'human',
+      messageType: 'human',
+      content: payload.content
+    });
+
     return reply.code(201).send({
       sessionId,
       status: 'awaiting_assistant_reply',
-      appendedMessage: {
-        sessionId,
-        sequence: 2,
-        role: 'human',
-        messageType: 'human',
-        content: payload.content,
-        createdAt: baseTimestamp
-      },
+      appendedMessage,
       assistantWork: {
         status: 'queued',
         taskType: 'generate_decision_reply'
@@ -100,6 +127,8 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
       replanRange: payload.replanRange
     });
 
+    await decisionSessionRepository.saveDraftResolution(sessionId, resolution);
+
     return reply.code(200).send({
       sessionId,
       status: 'awaiting_resolution_confirmation',
@@ -120,6 +149,11 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
         message: 'Invalid decision resolution payload'
       });
     }
+
+    await decisionSessionRepository.saveResolution({
+      sessionId,
+      ...payload
+    });
 
     return reply.code(200).send({
       sessionId,

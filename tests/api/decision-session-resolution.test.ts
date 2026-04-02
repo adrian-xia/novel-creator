@@ -1,8 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const saveDraftResolutionMock = vi.fn();
+const saveResolutionMock = vi.fn();
+
+vi.mock('../../packages/storage/src/repositories/decision-session-repository', () => ({
+  DecisionSessionRepository: class {
+    saveDraftResolution = saveDraftResolutionMock;
+    saveResolution = saveResolutionMock;
+  }
+}));
+
 import { buildApp } from '../../apps/api/src/app';
 
 describe('decision session resolution routes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('generates a structured resolution draft for confirmation', async () => {
+    saveDraftResolutionMock.mockResolvedValue({
+      id: 'session-123',
+      status: 'awaiting_resolution_confirmation'
+    });
+
     const app = buildApp();
 
     const response = await app.inject({
@@ -44,6 +64,21 @@ describe('decision session resolution routes', () => {
         required: true,
         requestType: 'confirm_resolution'
       }
+    });
+    expect(saveDraftResolutionMock).toHaveBeenCalledWith('session-123', {
+      sessionId: 'session-123',
+      resolutionType: 'replan_required',
+      decisionSummary: 'Delay the reveal and rebuild chapters 8 through 10.',
+      storyFactsToApply: ['The villain identity remains hidden.'],
+      chapterPlanAdjustments: ['Move the reveal beat from chapter 8 to chapter 10.'],
+      volumeImpact: 'The midpoint shifts later.',
+      nextAction: 'replan_window',
+      replanRange: {
+        startChapter: 8,
+        endChapter: 10
+      },
+      resumeFromChapter: 8,
+      invalidateExistingPlans: true
     });
   });
 
@@ -91,6 +126,11 @@ describe('decision session resolution routes', () => {
   });
 
   it('accepts a confirmed resolution payload and returns the resolved route shape', async () => {
+    saveResolutionMock.mockResolvedValue({
+      id: 'session-123',
+      status: 'resolved'
+    });
+
     const app = buildApp();
 
     const response = await app.inject({
@@ -125,6 +165,18 @@ describe('decision session resolution routes', () => {
         resumeFromChapter: null,
         invalidateExistingPlans: false
       }
+    });
+    expect(saveResolutionMock).toHaveBeenCalledWith({
+      sessionId: 'session-123',
+      resolutionType: 'accept_alternative',
+      decisionSummary: 'Use the assistant alternative ending.',
+      storyFactsToApply: ['The mentor survives.'],
+      chapterPlanAdjustments: ['Replace the final confrontation beat.'],
+      volumeImpact: null,
+      nextAction: 'resume_current_chapter',
+      replanRange: null,
+      resumeFromChapter: null,
+      invalidateExistingPlans: false
     });
   });
 
@@ -154,6 +206,11 @@ describe('decision session resolution routes', () => {
   });
 
   it('accepts a replan resolution when resumeFromChapter is within the replan range', async () => {
+    saveResolutionMock.mockResolvedValue({
+      id: 'session-123',
+      status: 'resolved'
+    });
+
     const app = buildApp();
 
     const response = await app.inject({
@@ -194,6 +251,21 @@ describe('decision session resolution routes', () => {
         resumeFromChapter: 9,
         invalidateExistingPlans: true
       }
+    });
+    expect(saveResolutionMock).toHaveBeenCalledWith({
+      sessionId: 'session-123',
+      resolutionType: 'replan_required',
+      decisionSummary: 'Rework the window and resume after the revised setup.',
+      storyFactsToApply: ['The reveal remains delayed.'],
+      chapterPlanAdjustments: ['Rebuild chapters 8 to 10 around the new midpoint.'],
+      volumeImpact: null,
+      nextAction: 'replan_window',
+      replanRange: {
+        startChapter: 8,
+        endChapter: 10
+      },
+      resumeFromChapter: 9,
+      invalidateExistingPlans: true
     });
   });
 });

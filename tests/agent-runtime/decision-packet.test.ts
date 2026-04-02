@@ -20,7 +20,21 @@ describe('buildDecisionPacket', () => {
       reviewIssues: ['relationship fracture happens too early'],
       currentProposal: 'confirm the breakup in chapter 12',
       riskAnalysis: 'relationship fracture happens too early',
-      candidateAlternatives: []
+      candidateAlternatives: [],
+      contextSnapshot: {
+        storyContext: {
+          projectId: 'project-1',
+          chapterNumber: 12,
+          currentVolumeGoal: 'break the alliance',
+          recentSummaries: ['chapter 10 summary', 'chapter 11 summary']
+        },
+        reviewContext: {
+          reviewIssues: ['relationship fracture happens too early'],
+          currentProposal: 'confirm the breakup in chapter 12',
+          riskAnalysis: 'relationship fracture happens too early',
+          candidateAlternatives: []
+        }
+      }
     });
   });
 

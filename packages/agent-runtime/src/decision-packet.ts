@@ -9,6 +9,20 @@ export interface DecisionPacket {
   currentProposal: string;
   riskAnalysis: string;
   candidateAlternatives: string[];
+  contextSnapshot: {
+    storyContext: {
+      projectId: string;
+      chapterNumber: number;
+      currentVolumeGoal: string;
+      recentSummaries: string[];
+    };
+    reviewContext: {
+      reviewIssues: string[];
+      currentProposal: string;
+      riskAnalysis: string;
+      candidateAlternatives: string[];
+    };
+  };
 }
 
 export function buildDecisionPacket(input: {
@@ -22,13 +36,14 @@ export function buildDecisionPacket(input: {
   const context = assembleDecisionPacketContext(input);
 
   return {
-    projectId: context.projectId,
-    chapterNumber: context.chapterNumber,
-    currentVolumeGoal: context.currentVolumeGoal,
-    recentSummaries: context.recentSummaries,
-    reviewIssues: context.reviewIssues,
-    currentProposal: context.currentProposal,
-    riskAnalysis: context.reviewIssues.join('; '),
-    candidateAlternatives: []
+    projectId: context.storyContext.projectId,
+    chapterNumber: context.storyContext.chapterNumber,
+    currentVolumeGoal: context.storyContext.currentVolumeGoal,
+    recentSummaries: context.storyContext.recentSummaries,
+    reviewIssues: context.reviewContext.reviewIssues,
+    currentProposal: context.reviewContext.currentProposal,
+    riskAnalysis: context.reviewContext.riskAnalysis,
+    candidateAlternatives: context.reviewContext.candidateAlternatives,
+    contextSnapshot: context
   };
 }

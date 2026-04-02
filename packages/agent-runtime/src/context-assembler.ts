@@ -1,3 +1,8 @@
+import {
+  assembleDecisionConversation,
+  type DecisionConversationInput
+} from './decision-conversation';
+
 interface ChapterDraftContextInput {
   chapterPlan: string;
   currentVolumeSummary: string;
@@ -38,6 +43,12 @@ interface DecisionPacketContextInput {
   currentProposal: string;
 }
 
+interface DecisionConversationContextInput {
+  packet: Record<string, unknown>;
+  messageHistory: DecisionConversationInput['messages'];
+  currentDraftResolution: Record<string, unknown> | null;
+}
+
 export function assembleChapterDraftContext(input: ChapterDraftContextInput): string {
   return [
     '## Current Chapter Plan',
@@ -71,5 +82,28 @@ export function assembleChapterPlanContext(input: ChapterPlanContextInput) {
 }
 
 export function assembleDecisionPacketContext(input: DecisionPacketContextInput) {
-  return input;
+  return {
+    storyContext: {
+      projectId: input.projectId,
+      chapterNumber: input.chapterNumber,
+      currentVolumeGoal: input.currentVolumeGoal,
+      recentSummaries: input.recentSummaries
+    },
+    reviewContext: {
+      reviewIssues: input.reviewIssues,
+      currentProposal: input.currentProposal,
+      riskAnalysis: input.reviewIssues.join('; '),
+      candidateAlternatives: []
+    }
+  };
+}
+
+export function assembleDecisionConversationContext(
+  input: DecisionConversationContextInput
+) {
+  return assembleDecisionConversation({
+    packet: input.packet,
+    messages: input.messageHistory,
+    currentDraftResolution: input.currentDraftResolution
+  });
 }

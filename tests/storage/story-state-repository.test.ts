@@ -18,7 +18,8 @@ const prisma = vi.hoisted(() => ({
     createMany: vi.fn()
   },
   chapterPlanRecord: {
-    create: vi.fn()
+    create: vi.fn(),
+    updateMany: vi.fn()
   },
   chapterDraftRecord: {
     create: vi.fn()
@@ -111,6 +112,34 @@ describe('StoryStateRepository', () => {
     expect(prisma.storyState.upsert).toHaveBeenCalled();
   });
 
+  it('invalidates chapter plans within a replan window', async () => {
+    prisma.chapterPlanRecord.updateMany.mockResolvedValue({ count: 3 });
+
+    const { StoryStateRepository } = await import(
+      '../../packages/storage/src/repositories/story-state-repository'
+    );
+    const repository = new StoryStateRepository();
+
+    await repository.invalidateChapterPlansInRange({
+      projectId: 'project-1',
+      startChapter: 8,
+      endChapter: 10
+    });
+
+    expect(prisma.chapterPlanRecord.updateMany).toHaveBeenCalledWith({
+      where: {
+        projectId: 'project-1',
+        chapterNumber: {
+          gte: 8,
+          lte: 10
+        }
+      },
+      data: {
+        invalidatedAt: expect.any(Date)
+      }
+    });
+  });
+
   it('upserts persisted chapter state by project and chapter number', async () => {
     prisma.chapterStateRecord.upsert.mockResolvedValue({
       projectId: 'project-1',
@@ -143,6 +172,59 @@ describe('StoryStateRepository', () => {
       },
       update: {
         status: 'drafted'
+      }
+    });
+  });
+
+  it('marks a replan window as needs_replan chapter states', async () => {
+    prisma.chapterStateRecord.upsert.mockResolvedValue({
+      projectId: 'project-1',
+      chapterNumber: 8,
+      status: 'needs_replan'
+    });
+
+    const { StoryStateRepository } = await import(
+      '../../packages/storage/src/repositories/story-state-repository'
+    );
+    const repository = new StoryStateRepository();
+
+    await repository.markChaptersNeedsReplan({
+      projectId: 'project-1',
+      startChapter: 8,
+      endChapter: 10
+    });
+
+    expect(prisma.chapterStateRecord.upsert).toHaveBeenCalledTimes(3);
+    expect(prisma.chapterStateRecord.upsert).toHaveBeenNthCalledWith(1, {
+      where: {
+        projectId_chapterNumber: {
+          projectId: 'project-1',
+          chapterNumber: 8
+        }
+      },
+      create: {
+        projectId: 'project-1',
+        chapterNumber: 8,
+        status: 'needs_replan'
+      },
+      update: {
+        status: 'needs_replan'
+      }
+    });
+    expect(prisma.chapterStateRecord.upsert).toHaveBeenNthCalledWith(3, {
+      where: {
+        projectId_chapterNumber: {
+          projectId: 'project-1',
+          chapterNumber: 10
+        }
+      },
+      create: {
+        projectId: 'project-1',
+        chapterNumber: 10,
+        status: 'needs_replan'
+      },
+      update: {
+        status: 'needs_replan'
       }
     });
   });

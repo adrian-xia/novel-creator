@@ -27,6 +27,7 @@ model NovelProject {
   agentRunRecords    AgentRunRecord[]
   publishProfile     PublishProfileRecord?
   decisionSessions   DecisionSessionRecord[]
+  chapterRecoveryTaskRecords ChapterRecoveryTaskRecord[]
   publishTaskRecords PublishTaskRecord[]
   exportArtifactRecords ExportArtifactRecord[]
   workflowRunRecords WorkflowRunRecord[]
@@ -98,6 +99,7 @@ model ChapterPlanRecord {
   projectId     String
   chapterNumber Int
   payload       Json
+  invalidatedAt DateTime?
   createdAt     DateTime @default(now())
   project       NovelProject @relation(fields: [projectId], references: [id])
 }
@@ -170,25 +172,34 @@ model PublishProfileRecord {
 }
 
 model DecisionSessionRecord {
-  id            String   @id @default(uuid())
-  projectId     String
-  chapterNumber Int
-  status        String
-  packet        Json
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  project       NovelProject @relation(fields: [projectId], references: [id])
-  messages      DecisionMessageRecord[]
-  resolution    DecisionResolutionRecord?
+  id                    String   @id @default(uuid())
+  projectId             String
+  chapterNumber         Int
+  triggerReason         String?
+  sourceReviewOutcomeId String?
+  status                String
+  packet                Json
+  contextSnapshot       Json
+  currentDraftResolution Json?
+  resolvedAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  project               NovelProject @relation(fields: [projectId], references: [id])
+  messages              DecisionMessageRecord[]
+  resolution            DecisionResolutionRecord?
 }
 
 model DecisionMessageRecord {
   id         String   @id @default(uuid())
   sessionId  String
+  sequence   Int
   role       String
+  messageType String
   content    String
   createdAt  DateTime @default(now())
   session    DecisionSessionRecord @relation(fields: [sessionId], references: [id])
+
+  @@unique([sessionId, sequence])
 }
 
 model DecisionResolutionRecord {
@@ -199,8 +210,25 @@ model DecisionResolutionRecord {
   chapterPlanAdjustments Json
   volumeImpact           String?
   nextAction             String
+  replanRangeStartChapter Int?
+  replanRangeEndChapter  Int?
+  resumeFromChapter      Int?
+  invalidateExistingPlans Boolean @default(false)
   createdAt              DateTime @default(now())
   session                DecisionSessionRecord @relation(fields: [sessionId], references: [id])
+}
+
+model ChapterRecoveryTaskRecord {
+  id                String   @id @default(uuid())
+  projectId         String
+  sessionId         String
+  startChapter      Int
+  endChapter        Int
+  resumeFromChapter Int
+  status            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  project           NovelProject @relation(fields: [projectId], references: [id])
 }
 
 model PublishTaskRecord {

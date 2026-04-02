@@ -3,12 +3,16 @@ import { createNovelProject } from '../../packages/domain/src/novel-project';
 
 const createProjectRecord = vi.fn();
 const findProjectRecord = vi.fn();
+const findDecisionQueueRecords = vi.fn();
 
 vi.mock('../../packages/storage/src/client', () => ({
   prisma: {
     novelProject: {
       create: createProjectRecord,
       findUnique: findProjectRecord
+    },
+    decisionSessionRecord: {
+      findMany: findDecisionQueueRecords
     }
   }
 }));
@@ -17,6 +21,7 @@ describe('project repository contracts', () => {
   beforeEach(() => {
     createProjectRecord.mockReset();
     findProjectRecord.mockReset();
+    findDecisionQueueRecords.mockReset();
   });
 
   it('creates a new draft project payload', () => {
@@ -89,6 +94,34 @@ describe('project repository contracts', () => {
     await expect(new ProjectRepository().exists('project-missing')).resolves.toBe(false);
     expect(findProjectRecord).toHaveBeenCalledWith({
       where: { id: 'project-missing' }
+    });
+  });
+
+  it('returns the decision queue ordered by latest session activity', async () => {
+    const { ProjectRepository } = await import(
+      '../../packages/storage/src/repositories/project-repository'
+    );
+
+    findDecisionQueueRecords.mockResolvedValue([
+      {
+        id: 'session-1',
+        projectId: 'project-1',
+        status: 'awaiting_human_input'
+      }
+    ]);
+
+    await expect(new ProjectRepository().getDecisionQueue()).resolves.toEqual([
+      {
+        id: 'session-1',
+        projectId: 'project-1',
+        status: 'awaiting_human_input'
+      }
+    ]);
+    expect(findDecisionQueueRecords).toHaveBeenCalledWith({
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        project: true
+      }
     });
   });
 });

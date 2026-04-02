@@ -22,6 +22,15 @@ export class ProjectRepository {
     return project !== null;
   }
 
+  async getDecisionQueue() {
+    return prisma.decisionSessionRecord.findMany({
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        project: true
+      }
+    });
+  }
+
   async getProjectDecisionAndPublishingDetail(projectId: string) {
     return prisma.novelProject.findUnique({
       where: { id: projectId },

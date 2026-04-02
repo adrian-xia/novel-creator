@@ -6,13 +6,20 @@ export class DecisionSessionRepository {
     projectId: string;
     chapterNumber: number;
     packet: Record<string, unknown>;
+    triggerReason: string | null;
+    sourceReviewOutcomeId: string | null;
+    contextSnapshot: Record<string, unknown>;
   }) {
     return prisma.decisionSessionRecord.create({
       data: {
         projectId: input.projectId,
         chapterNumber: input.chapterNumber,
         status: 'open',
-        packet: input.packet
+        packet: input.packet,
+        triggerReason: input.triggerReason,
+        sourceReviewOutcomeId: input.sourceReviewOutcomeId,
+        contextSnapshot: input.contextSnapshot,
+        currentDraftResolution: null
       }
     });
   }
@@ -22,7 +29,9 @@ export class DecisionSessionRepository {
       const appendedMessage = await tx.decisionMessageRecord.create({
         data: {
           sessionId: message.sessionId,
+          sequence: message.sequence,
           role: message.role,
+          messageType: message.messageType,
           content: message.content,
           ...(message.createdAt ? { createdAt: message.createdAt } : {})
         }
@@ -39,18 +48,68 @@ export class DecisionSessionRepository {
     });
   }
 
+  async saveDraftResolution(sessionId: string, draft: Record<string, unknown>) {
+    return prisma.decisionSessionRecord.update({
+      where: { id: sessionId },
+      data: {
+        currentDraftResolution: draft,
+        status: 'awaiting_resolution_confirmation'
+      }
+    });
+  }
+
   async saveResolution(resolution: DecisionResolution) {
+    const replanRangeStartChapter = resolution.replanRange?.startChapter ?? null;
+    const replanRangeEndChapter = resolution.replanRange?.endChapter ?? null;
+
     return prisma.$transaction(async (tx) => {
       await tx.decisionResolutionRecord.upsert({
         where: { sessionId: resolution.sessionId },
-        create: resolution,
-        update: resolution
+        create: {
+          sessionId: resolution.sessionId,
+          resolutionType: resolution.resolutionType,
+          decisionSummary: resolution.decisionSummary,
+          storyFactsToApply: resolution.storyFactsToApply,
+          chapterPlanAdjustments: resolution.chapterPlanAdjustments,
+          volumeImpact: resolution.volumeImpact,
+          nextAction: resolution.nextAction,
+          replanRangeStartChapter,
+          replanRangeEndChapter,
+          resumeFromChapter: resolution.resumeFromChapter,
+          invalidateExistingPlans: resolution.invalidateExistingPlans
+        },
+        update: {
+          resolutionType: resolution.resolutionType,
+          decisionSummary: resolution.decisionSummary,
+          storyFactsToApply: resolution.storyFactsToApply,
+          chapterPlanAdjustments: resolution.chapterPlanAdjustments,
+          volumeImpact: resolution.volumeImpact,
+          nextAction: resolution.nextAction,
+          replanRangeStartChapter,
+          replanRangeEndChapter,
+          resumeFromChapter: resolution.resumeFromChapter,
+          invalidateExistingPlans: resolution.invalidateExistingPlans
+        }
       });
 
       return tx.decisionSessionRecord.update({
         where: { id: resolution.sessionId },
-        data: { status: 'resolved' }
+        data: {
+          status: 'resolved',
+          resolvedAt: new Date(),
+          currentDraftResolution: null
+        }
       });
+    });
+  }
+
+  async listSessions() {
+    return prisma.decisionSessionRecord.findMany({
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        messages: { orderBy: { sequence: 'asc' } },
+        resolution: true
+      }
     });
   }
 
@@ -58,9 +117,16 @@ export class DecisionSessionRepository {
     return prisma.decisionSessionRecord.findUnique({
       where: { id: sessionId },
       include: {
-        messages: { orderBy: { createdAt: 'asc' } },
+        messages: { orderBy: { sequence: 'asc' } },
         resolution: true
       }
+    });
+  }
+
+  async cancelSession(sessionId: string) {
+    return prisma.decisionSessionRecord.update({
+      where: { id: sessionId },
+      data: { status: 'cancelled' }
     });
   }
 }

@@ -83,6 +83,25 @@ export class StoryStateRepository {
     });
   }
 
+  async invalidateChapterPlansInRange(input: {
+    projectId: string;
+    startChapter: number;
+    endChapter: number;
+  }) {
+    return prisma.chapterPlanRecord.updateMany({
+      where: {
+        projectId: input.projectId,
+        chapterNumber: {
+          gte: input.startChapter,
+          lte: input.endChapter
+        }
+      },
+      data: {
+        invalidatedAt: new Date()
+      }
+    });
+  }
+
   async saveChapterDraft(draft: ChapterDraft) {
     return prisma.chapterDraftRecord.create({
       data: {
@@ -136,6 +155,37 @@ export class StoryStateRepository {
       projectId: input.projectId,
       chapterNumber: input.chapterNumber,
       status: 'blocked_for_manual_decision'
+    });
+  }
+
+  async markChaptersNeedsReplan(input: {
+    projectId: string;
+    startChapter: number;
+    endChapter: number;
+  }) {
+    return prisma.$transaction(async (tx) => {
+      const updates = [];
+
+      for (let chapterNumber = input.startChapter; chapterNumber <= input.endChapter; chapterNumber += 1) {
+        updates.push(tx.chapterStateRecord.upsert({
+          where: {
+            projectId_chapterNumber: {
+              projectId: input.projectId,
+              chapterNumber
+            }
+          },
+          create: {
+            projectId: input.projectId,
+            chapterNumber,
+            status: 'needs_replan'
+          },
+          update: {
+            status: 'needs_replan'
+          }
+        }));
+      }
+
+      return Promise.all(updates);
     });
   }
 

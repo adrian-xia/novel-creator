@@ -1,5 +1,6 @@
 export * from './create-project-flow';
 export * from './enqueue';
+export * from './chapter-replan-flow';
 export * from './generate-chapter-flow';
 export * from './generate-outline-flow';
 export * from './generate-volume-flow';

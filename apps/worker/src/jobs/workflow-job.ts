@@ -1,4 +1,5 @@
 import {
+  chapterReplanFlow,
   createProjectFlow,
   decisionSessionFlow,
   generateChapterFlow,
@@ -14,6 +15,7 @@ export async function runWorkflowJob(
   payload: { projectId?: string; chapterNumber?: number } = {}
 ) {
   const flowMap = {
+    'chapter-replan-flow': chapterReplanFlow(),
     'create-project-flow': createProjectFlow(),
     'generate-outline-flow': generateOutlineFlow(),
     'generate-volume-flow': generateVolumeFlow(),

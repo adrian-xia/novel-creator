@@ -9,8 +9,11 @@ vi.mock('../../packages/workflows/src', async () => {
     '../../packages/workflows/src'
   );
 
+  return actual;
+});
+
+vi.mock('../../packages/workflows/src/workflow-runner', () => {
   return {
-    ...actual,
     runInstrumentedWorkflow
   };
 });
@@ -25,7 +28,7 @@ describe('runWorkflowJob', () => {
   it('dispatches the decision-session workflow', async () => {
     runInstrumentedWorkflow.mockResolvedValue({
       flowName: 'decision-session-flow',
-      stepCount: 6
+      stepCount: 10
     });
 
     await expect(
@@ -35,24 +38,62 @@ describe('runWorkflowJob', () => {
       })
     ).resolves.toEqual({
       flowName: 'decision-session-flow',
-      stepCount: 6
+      stepCount: 10
     });
 
     expect(runInstrumentedWorkflow).toHaveBeenCalledWith({
       flow: {
         name: 'decision-session-flow',
         steps: [
-          'load-blocked-review',
-          'build-decision-packet',
-          'create-decision-session',
-          'await-human-and-assistant-conversation',
-          'persist-decision-resolution',
-          'apply-resolution'
+          'append-human-message',
+          'load-decision-context',
+          'assemble-decision-conversation-context',
+          'run-decision-assistant',
+          'persist-assistant-message',
+          'generate-resolution-draft',
+          'persist-resolution',
+          'apply-resolution',
+          'invalidate-plans-in-window',
+          'enqueue-replan-window'
         ]
       },
       payload: {
         projectId: 'project-1',
         chapterNumber: 5
+      }
+    });
+  });
+
+  it('dispatches the chapter-replan workflow', async () => {
+    runInstrumentedWorkflow.mockResolvedValue({
+      flowName: 'chapter-replan-flow',
+      stepCount: 5
+    });
+
+    await expect(
+      runWorkflowJob('chapter-replan-flow', {
+        projectId: 'project-2',
+        chapterNumber: 8
+      })
+    ).resolves.toEqual({
+      flowName: 'chapter-replan-flow',
+      stepCount: 5
+    });
+
+    expect(runInstrumentedWorkflow).toHaveBeenCalledWith({
+      flow: {
+        name: 'chapter-replan-flow',
+        steps: [
+          'load-recovery-task',
+          'invalidate-plans-in-window',
+          'set-chapters-needs-replan',
+          'enqueue-replan-window',
+          'mark-recovery-task-complete'
+        ]
+      },
+      payload: {
+        projectId: 'project-2',
+        chapterNumber: 8
       }
     });
   });

@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import { registerDecisionSessionRoutes } from './routes/decision-sessions';
+import { registerExportExecutionRoutes } from './routes/export-execution';
 import { registerProjectRoutes } from './routes/projects';
 import { registerPromptRoutes } from './routes/prompts';
 import { registerProviderCapacityRoutes } from './routes/provider-capacity';
@@ -15,6 +16,7 @@ export function buildApp() {
   registerProviderCapacityRoutes(app);
   registerStoryProductionRoutes(app);
   registerDecisionSessionRoutes(app);
+  registerExportExecutionRoutes(app);
   registerPublishingRoutes(app);
   registerWorkflowRunRoutes(app);
 

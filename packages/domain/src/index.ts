@@ -4,5 +4,6 @@ export * from './prompt-config';
 export * from './provider-capacity';
 export * from './decision-session';
 export * from './publishing';
+export * from './export-execution';
 export * from './workflow-observability';
 export * from './story-state';

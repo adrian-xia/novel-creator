@@ -72,10 +72,14 @@ describe('storage package setup', () => {
     const { StoryStateRepository } = await importFreshModule(
       'packages/storage/src/repositories/story-state-repository.ts'
     );
+    const { ExportExecutionRepository } = await importFreshModule(
+      'packages/storage/src/repositories/export-execution-repository.ts'
+    );
 
     expect(new ProjectRepository()).toBeInstanceOf(ProjectRepository);
     expect(new PromptRepository()).toBeInstanceOf(PromptRepository);
     expect(new StoryStateRepository()).toBeInstanceOf(StoryStateRepository);
+    expect(new ExportExecutionRepository()).toBeInstanceOf(ExportExecutionRepository);
 
     await prisma.$disconnect();
   }, 45_000);

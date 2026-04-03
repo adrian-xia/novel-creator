@@ -2,6 +2,11 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import DecisionSessionPage from '../../apps/web/src/app/decision-sessions/[sessionId]/page';
+import {
+  confirmDecisionResolution,
+  createDecisionMessage,
+  generateDecisionResolutionDraft
+} from '../../apps/web/src/lib/api';
 
 describe('DecisionSessionPage', () => {
   const fetchMock = vi.fn();
@@ -80,6 +85,12 @@ describe('DecisionSessionPage', () => {
     expect(html).toContain('Drafted an alternative that delays the reveal to chapter 12.');
     expect(html).toContain('Delay the villain reveal to chapter 12.');
     expect(html).toContain('confirm_resolution');
+    expect(html).toContain('Send Message');
+    expect(html).toContain('Generate Draft Resolution');
+    expect(html).toContain('Confirm Resolution');
+    expect(html).toContain('/decision-sessions/session-1/messages');
+    expect(html).toContain('/decision-sessions/session-1/generate-resolution');
+    expect(html).toContain('/decision-sessions/session-1/resolve');
   });
 
   it('renders a not-found state when the API returns a missing-session payload', async () => {
@@ -98,5 +109,113 @@ describe('DecisionSessionPage', () => {
 
     expect(html).toContain('Decision Session');
     expect(html).toContain('Decision session not found');
+  });
+
+  it('posts decision-session actions to the live API routes', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          sessionId: 'session-1',
+          status: 'awaiting_assistant_reply',
+          appendedMessage: { sequence: 4 },
+          assistantWork: { flowName: 'decision-session-flow' }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          sessionId: 'session-1',
+          status: 'awaiting_resolution_confirmation',
+          resolution: { resolutionType: 'accept_alternative' },
+          confirmation: {
+            required: true,
+            requestType: 'confirm_resolution'
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          sessionId: 'session-1',
+          status: 'resolved',
+          resolution: { resolutionType: 'accept_alternative' },
+          recoveryWork: null
+        })
+      });
+
+    await createDecisionMessage('session-1', { content: 'Keep the reveal later.' });
+    await generateDecisionResolutionDraft('session-1', {
+      resolutionType: 'accept_alternative',
+      decisionSummary: 'Delay the reveal to chapter 12.',
+      storyFactsToApply: ['The reveal stays hidden.'],
+      chapterPlanAdjustments: ['Push the reveal scene later.'],
+      volumeImpact: null,
+      replanRange: null
+    });
+    await confirmDecisionResolution('session-1', {
+      resolutionType: 'accept_alternative',
+      decisionSummary: 'Delay the reveal to chapter 12.',
+      storyFactsToApply: ['The reveal stays hidden.'],
+      chapterPlanAdjustments: ['Push the reveal scene later.'],
+      volumeImpact: null,
+      nextAction: 'resume_current_chapter',
+      replanRange: null,
+      resumeFromChapter: null,
+      invalidateExistingPlans: false
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://localhost:3001/decision-sessions/session-1/messages',
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          content: 'Keep the reveal later.'
+        })
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:3001/decision-sessions/session-1/generate-resolution',
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          resolutionType: 'accept_alternative',
+          decisionSummary: 'Delay the reveal to chapter 12.',
+          storyFactsToApply: ['The reveal stays hidden.'],
+          chapterPlanAdjustments: ['Push the reveal scene later.'],
+          volumeImpact: null,
+          replanRange: null
+        })
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'http://localhost:3001/decision-sessions/session-1/resolve',
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          resolutionType: 'accept_alternative',
+          decisionSummary: 'Delay the reveal to chapter 12.',
+          storyFactsToApply: ['The reveal stays hidden.'],
+          chapterPlanAdjustments: ['Push the reveal scene later.'],
+          volumeImpact: null,
+          nextAction: 'resume_current_chapter',
+          replanRange: null,
+          resumeFromChapter: null,
+          invalidateExistingPlans: false
+        })
+      }
+    );
   });
 });

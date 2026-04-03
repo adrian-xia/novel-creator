@@ -1,7 +1,19 @@
 import { prisma } from '../client';
 
+type CreateRunInput = {
+  flowName: string;
+  projectId: string;
+  chapterNumber: number | null;
+};
+
 export class WorkflowRunRepository {
-  async createRun(input: { flowName: string; projectId: string; chapterNumber: number | null }) {
+  async listRuns() {
+    return prisma.workflowRunRecord.findMany({
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
+    });
+  }
+
+  async createRun(input: CreateRunInput) {
     return prisma.workflowRunRecord.create({
       data: {
         flowName: input.flowName,

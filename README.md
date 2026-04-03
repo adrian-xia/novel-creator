@@ -9,17 +9,17 @@
 
 ## Phase 1 Expected Behavior
 
-- `POST /projects` creates a project payload
-- prompt configs can be listed and updated
-- capacity service can lease a provider key
-- worker can enqueue a placeholder workflow job
+- `POST /projects` persists a project through the storage-backed API
+- prompt configs can be created through the storage-backed API
+- provider capacity registrations can be persisted through the storage-backed API
+- worker rejects unknown workflow jobs instead of running placeholder flows
 - web dashboard renders the internal control panel shell
 
 ## Phase 2 Expected Behavior
 
-- `POST /projects/:projectId/flows/outline` queues outline generation
-- `POST /projects/:projectId/flows/volume` queues volume generation
-- `POST /projects/:projectId/flows/next-chapter` queues the next chapter pipeline
+- `POST /projects/:projectId/flows/outline` queues outline generation and records a workflow run
+- `POST /projects/:projectId/flows/volume` queues volume generation and records a workflow run
+- `POST /projects/:projectId/flows/next-chapter` queues the next chapter pipeline and records a workflow run
 - project detail UI shows outline, volumes, chapters, and recent agent runs
 - review/rewrite logic stops after two automatic rewrite attempts
 
@@ -37,3 +37,7 @@
 - decision-session messages persist and can generate structured draft resolutions
 - confirmed resolutions can define a dynamic replan window
 - recovery tasks can invalidate existing plans and resume from a specific chapter
+- decision-session detail pages expose message, draft-generation, and resolution-confirmation actions through web proxy routes
+- approved chapters expose exportable-chapter, preview, and download surfaces for `plain_text`, `markdown`, and `bundle` exports
+- publish center can preview/export approved chapter batches and inspect live publish tasks plus workflow-run data from the API
+- external platform auto-upload remains intentionally unsupported; manual export is the supported publish path

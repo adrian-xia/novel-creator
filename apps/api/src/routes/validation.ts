@@ -35,6 +35,12 @@ type PublishProfilePayload = {
   defaultExportFormat: 'plain_text' | 'markdown' | 'bundle';
   effectiveFromChapter: number | null;
 };
+type ExportBatchPayload =
+  | {
+      chapterNumbers: number[];
+      format: 'plain_text' | 'markdown' | 'bundle';
+    }
+  | { error: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -409,5 +415,32 @@ export function parsePublishProfilePayload(value: unknown): PublishProfilePayloa
     manualExportTargets,
     defaultExportFormat: defaultExportFormat as 'plain_text' | 'markdown' | 'bundle',
     effectiveFromChapter: effectiveFromChapter ?? null
+  };
+}
+
+export function parseExportBatchPayload(value: unknown): ExportBatchPayload {
+  if (!isRecord(value) || !Array.isArray(value.chapterNumbers) || !isString(value.format)) {
+    return { error: 'Export batch payload must include chapterNumbers[] and format' };
+  }
+
+  if (value.chapterNumbers.length === 0) {
+    return { error: 'At least one chapter number is required' };
+  }
+
+  if (!value.chapterNumbers.every((chapter) => isNumber(chapter) && chapter >= 1)) {
+    return { error: 'Chapter numbers must be positive integers' };
+  }
+
+  if (new Set(value.chapterNumbers).size !== value.chapterNumbers.length) {
+    return { error: 'Duplicate chapter numbers are not allowed' };
+  }
+
+  if (!['plain_text', 'markdown', 'bundle'].includes(value.format)) {
+    return { error: `Unsupported export format: ${String(value.format)}` };
+  }
+
+  return {
+    chapterNumbers: [...value.chapterNumbers].sort((a, b) => a - b),
+    format: value.format as 'plain_text' | 'markdown' | 'bundle'
   };
 }

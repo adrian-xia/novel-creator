@@ -131,4 +131,14 @@ describe('runWorkflowJob', () => {
       }
     });
   });
+
+  it('rejects unknown workflows instead of running an empty flow', async () => {
+    await expect(
+      runWorkflowJob('unknown-workflow', {
+        projectId: 'project-1'
+      })
+    ).rejects.toThrow('Unknown workflow job: unknown-workflow');
+
+    expect(runInstrumentedWorkflow).not.toHaveBeenCalled();
+  });
 });

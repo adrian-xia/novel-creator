@@ -1,5 +1,9 @@
 {
   "name": "@novel-creator/agent-runtime",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "dependencies": {
+    "@novel-creator/domain": "workspace:*",
+    "jszip": "^3.10.1"
+  }
 }

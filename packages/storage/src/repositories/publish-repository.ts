@@ -51,6 +51,25 @@ function assertManualExportTask(task: PublishTaskRecordLike | null, publishTaskI
 }
 
 export class PublishRepository {
+  async getPublishProfile(projectId: string): Promise<PublishProfile | null> {
+    const profile = await prisma.publishProfileRecord.findUnique({
+      where: { projectId }
+    });
+
+    if (!profile) {
+      return null;
+    }
+
+    return {
+      projectId: profile.projectId,
+      publishEnabled: profile.publishEnabled,
+      autoPublishTargets: normalizeTargets(profile.autoPublishTargets),
+      manualExportTargets: normalizeTargets(profile.manualExportTargets),
+      defaultExportFormat: profile.defaultExportFormat as ExportFormat,
+      effectiveFromChapter: profile.effectiveFromChapter
+    };
+  }
+
   async upsertPublishProfile(profile: PublishProfile) {
     const autoPublishTargets = normalizeTargets(profile.autoPublishTargets);
     const manualExportTargets = normalizeTargets(profile.manualExportTargets);
@@ -150,6 +169,18 @@ export class PublishRepository {
         },
         orderBy: [{ targetPlatform: 'asc' }, { mode: 'asc' }]
       });
+    });
+  }
+
+  async listPublishTasks() {
+    return prisma.publishTaskRecord.findMany({
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }]
+    });
+  }
+
+  async listExportArtifacts() {
+    return prisma.exportArtifactRecord.findMany({
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }]
     });
   }
 

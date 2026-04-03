@@ -1,8 +1,34 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../../apps/api/src/app';
 
+const createProviderCapacityRecordMock = vi.fn();
+
+vi.mock('../../packages/storage/src/repositories/provider-capacity-repository', () => ({
+  ProviderCapacityRepository: class {
+    create = createProviderCapacityRecordMock;
+  }
+}));
+
 describe('provider capacity route', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('creates a provider capacity record', async () => {
+    createProviderCapacityRecordMock.mockResolvedValue({
+      id: 'provider-capacity-persisted',
+      provider: 'openai',
+      model: 'gpt-5.4',
+      keyName: 'primary',
+      secretRef: 'vault://openai/primary',
+      maxConcurrentRequests: 8,
+      requestsPerMinute: 120,
+      tokensPerMinute: 240000,
+      dailyBudget: '50.00',
+      enabled: true,
+      priority: 1
+    });
+
     const app = buildApp();
 
     const response = await app.inject({
@@ -26,7 +52,8 @@ describe('provider capacity route', () => {
 
     const body = response.json();
 
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      id: 'provider-capacity-persisted',
       provider: 'openai',
       model: 'gpt-5.4',
       keyName: 'primary',
@@ -38,7 +65,22 @@ describe('provider capacity route', () => {
       enabled: true,
       priority: 1
     });
-    expect(body.id).toEqual(expect.any(String));
+    expect(createProviderCapacityRecordMock).toHaveBeenCalledTimes(1);
+    expect(createProviderCapacityRecordMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'openai',
+        model: 'gpt-5.4',
+        keyName: 'primary',
+        secretRef: 'vault://openai/primary',
+        maxConcurrentRequests: 8,
+        requestsPerMinute: 120,
+        tokensPerMinute: 240000,
+        dailyBudget: '50.00',
+        enabled: true,
+        priority: 1,
+        id: expect.any(String)
+      })
+    );
   });
 
   it('rejects an invalid provider capacity payload', async () => {

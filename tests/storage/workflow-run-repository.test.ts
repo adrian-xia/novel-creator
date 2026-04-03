@@ -60,6 +60,15 @@ describe('WorkflowRunRepository', () => {
       chapterNumber: 10
     });
 
+    expect(prisma.workflowRunRecord.create).toHaveBeenCalledWith({
+      data: {
+        flowName: 'publish-chapter-flow',
+        projectId: 'project-1',
+        chapterNumber: 10,
+        status: 'queued'
+      }
+    });
+
     await repository.markStepRunning(run.id, 'expand-publish-tasks');
     await repository.markStepSucceeded(run.id, 'expand-publish-tasks');
     await repository.markRunSucceeded(run.id);

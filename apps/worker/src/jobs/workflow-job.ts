@@ -25,7 +25,11 @@ export async function runWorkflowJob(
     'decision-session-flow': decisionSessionFlow()
   } as const;
 
-  const flow = flowMap[jobName as keyof typeof flowMap] ?? { name: jobName, steps: [] };
+  const flow = flowMap[jobName as keyof typeof flowMap];
+
+  if (!flow) {
+    throw new Error(`Unknown workflow job: ${jobName}`);
+  }
 
   return runInstrumentedWorkflow({
     flow,

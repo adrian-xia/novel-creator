@@ -58,7 +58,7 @@ export default async function ProjectDetailPage({
       </section>
       <nav>
         <a href="/decision-sessions">Decision Queue</a>
-        <a href="/publish">Publish Center</a>
+        <a href={`/publish?projectId=${projectId}`}>Publish Center</a>
         <a href="/runs">Workflow Runs</a>
       </nav>
     </main>

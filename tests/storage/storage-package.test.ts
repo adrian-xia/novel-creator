@@ -27,6 +27,15 @@ describe('storage package setup', () => {
     expect(schema).toContain('@@unique([projectId, chapterNumber, version])');
   });
 
+  it('declares relay-capable provider capacity columns in the Prisma schema', () => {
+    const schema = readFileSync(resolve(repoRoot, 'packages/storage/prisma/schema.prisma'), 'utf8');
+
+    expect(schema).toContain('baseUrl');
+    expect(schema).toContain('apiKeySecretRef');
+    expect(schema).toContain('protocolMode');
+    expect(schema).not.toContain('secretRef             String');
+  });
+
   it('declares project foreign-key relations for task 2 storage records', () => {
     const schema = readFileSync(resolve(repoRoot, 'packages/storage/prisma/schema.prisma'), 'utf8');
 

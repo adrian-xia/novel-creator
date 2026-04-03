@@ -3,7 +3,9 @@ export interface ProviderCapacity {
   provider: string;
   model: string;
   keyName: string;
-  secretRef: string;
+  baseUrl: string;
+  apiKeySecretRef: string;
+  protocolMode: 'auto' | 'responses' | 'chat_completions';
   maxConcurrentRequests: number;
   requestsPerMinute: number;
   tokensPerMinute: number;

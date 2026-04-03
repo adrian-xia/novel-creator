@@ -33,6 +33,7 @@
 
 ## Phase 4 Expected Behavior
 
+- provider capacity records can target third-party OpenAI-compatible relays via per-capacity `baseUrl`, `apiKeySecretRef`, and `protocolMode`
 - blocked review outcomes open a real multi-turn decision session
 - decision-session messages persist and can generate structured draft resolutions
 - confirmed resolutions can define a dynamic replan window

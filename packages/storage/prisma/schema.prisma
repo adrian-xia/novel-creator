@@ -52,7 +52,9 @@ model ProviderCapacity {
   provider              String
   model                 String
   keyName               String
-  secretRef             String
+  baseUrl               String
+  apiKeySecretRef       String
+  protocolMode          String
   maxConcurrentRequests Int
   requestsPerMinute     Int
   tokensPerMinute       Int

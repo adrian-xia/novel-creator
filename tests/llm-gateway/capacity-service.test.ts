@@ -9,7 +9,9 @@ describe('CapacityService', () => {
         provider: 'openai',
         model: 'gpt-5-mini',
         keyName: 'primary',
-        secretRef: 'openai/key-a',
+        baseUrl: 'https://relay.example.com/v1',
+        apiKeySecretRef: 'vault://relay/openai-compatible-a',
+        protocolMode: 'auto',
         priority: 10,
         enabled: true,
         maxConcurrentRequests: 2,
@@ -23,7 +25,9 @@ describe('CapacityService', () => {
         provider: 'openai',
         model: 'gpt-5-mini',
         keyName: 'secondary',
-        secretRef: 'openai/key-b',
+        baseUrl: 'https://relay.example.com/v1',
+        apiKeySecretRef: 'vault://relay/openai-compatible-b',
+        protocolMode: 'responses',
         priority: 1,
         enabled: true,
         maxConcurrentRequests: 2,
@@ -39,7 +43,12 @@ describe('CapacityService', () => {
       model: 'gpt-5-mini'
     });
 
-    expect(lease.keyId).toBe('key-a');
+    expect(lease).toMatchObject({
+      keyId: 'key-a',
+      baseUrl: 'https://relay.example.com/v1',
+      apiKeySecretRef: 'vault://relay/openai-compatible-a',
+      protocolMode: 'auto'
+    });
     expect(lease.leaseId).toMatch(/^lease-/);
   });
 
@@ -50,7 +59,9 @@ describe('CapacityService', () => {
         provider: 'openai',
         model: 'gpt-5-mini',
         keyName: 'primary',
-        secretRef: 'openai/key-a',
+        baseUrl: 'https://relay.example.com/v1',
+        apiKeySecretRef: 'vault://relay/openai-compatible',
+        protocolMode: 'auto',
         priority: 10,
         enabled: true,
         maxConcurrentRequests: 1,
@@ -90,7 +101,9 @@ describe('CapacityService', () => {
         provider: 'openai',
         model: 'gpt-5-mini',
         keyName: 'primary',
-        secretRef: 'openai/key-a',
+        baseUrl: 'https://relay.example.com/v1',
+        apiKeySecretRef: 'vault://relay/openai-compatible',
+        protocolMode: 'chat_completions',
         priority: 10,
         enabled: true,
         maxConcurrentRequests: 1,
@@ -113,7 +126,9 @@ describe('CapacityService', () => {
         provider: 'openai',
         model: 'gpt-5-mini',
         keyName: 'primary',
-        secretRef: 'openai/key-a',
+        baseUrl: 'https://relay.example.com/v1',
+        apiKeySecretRef: 'vault://relay/openai-compatible',
+        protocolMode: 'auto',
         priority: 10,
         enabled: true,
         maxConcurrentRequests: 2,

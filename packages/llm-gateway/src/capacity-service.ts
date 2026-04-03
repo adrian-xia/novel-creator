@@ -10,6 +10,9 @@ export interface AcquireRequest {
 export interface CapacityLease {
   keyId: string;
   leaseId: string;
+  baseUrl: string;
+  apiKeySecretRef: string;
+  protocolMode: 'auto' | 'responses' | 'chat_completions';
 }
 
 export class CapacityService {
@@ -31,7 +34,13 @@ export class CapacityService {
     candidate.currentLeases += 1;
     const leaseId = `lease-${this.nextLeaseId++}`;
     this.activeLeases.set(leaseId, candidate.id);
-    return { keyId: candidate.id, leaseId };
+    return {
+      keyId: candidate.id,
+      leaseId,
+      baseUrl: candidate.baseUrl,
+      apiKeySecretRef: candidate.apiKeySecretRef,
+      protocolMode: candidate.protocolMode
+    };
   }
 
   async release(lease: CapacityLease): Promise<void> {

@@ -3,7 +3,13 @@ import { createAgentRunner } from '../../packages/agent-runtime/src/agent-runner
 
 describe('agent runner', () => {
   it('acquires capacity, renders the prompt, and records a succeeded run', async () => {
-    const lease = { leaseId: 'lease-1', keyId: 'key-1' };
+    const lease = {
+      leaseId: 'lease-1',
+      keyId: 'key-1',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKeySecretRef: 'vault://openai/primary',
+      protocolMode: 'responses'
+    };
     const acquire = vi.fn().mockResolvedValue(lease);
     const release = vi.fn().mockResolvedValue(undefined);
     const renderPrompt = vi.fn().mockReturnValue('rendered prompt');
@@ -37,7 +43,10 @@ describe('agent runner', () => {
     expect(invokeModel).toHaveBeenCalledWith({
       prompt: 'rendered prompt',
       provider: 'openai',
-      model: 'gpt-5.4-mini'
+      model: 'gpt-5.4-mini',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKeySecretRef: 'vault://openai/primary',
+      protocolMode: 'responses'
     });
     expect(saveAgentRun).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -54,7 +63,13 @@ describe('agent runner', () => {
   });
 
   it('records a failed run when model invocation fails and still releases the lease', async () => {
-    const lease = { leaseId: 'lease-2', keyId: 'key-2' };
+    const lease = {
+      leaseId: 'lease-2',
+      keyId: 'key-2',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKeySecretRef: 'vault://openai/primary',
+      protocolMode: 'responses'
+    };
     const acquire = vi.fn().mockResolvedValue(lease);
     const release = vi.fn().mockResolvedValue(undefined);
     const renderPrompt = vi.fn().mockReturnValue('rendered prompt');
@@ -95,7 +110,13 @@ describe('agent runner', () => {
   });
 
   it('releases the lease when writing the run audit fails without writing a fake failed run', async () => {
-    const lease = { leaseId: 'lease-3', keyId: 'key-3' };
+    const lease = {
+      leaseId: 'lease-3',
+      keyId: 'key-3',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKeySecretRef: 'vault://openai/primary',
+      protocolMode: 'responses'
+    };
     const acquire = vi.fn().mockResolvedValue(lease);
     const release = vi.fn().mockResolvedValue(undefined);
     const renderPrompt = vi.fn().mockReturnValue('rendered prompt');
@@ -135,5 +156,51 @@ describe('agent runner', () => {
       })
     );
     expect(release).toHaveBeenCalledWith(lease);
+  });
+
+  it('passes relay lease configuration through to invokeModel', async () => {
+    const lease = {
+      leaseId: 'lease-4',
+      keyId: 'key-4',
+      baseUrl: 'https://relay.example.com/v1',
+      apiKeySecretRef: 'vault://relay/openai-compatible',
+      protocolMode: 'chat_completions' as const
+    };
+    const acquire = vi.fn().mockResolvedValue(lease);
+    const release = vi.fn().mockResolvedValue(undefined);
+    const renderPrompt = vi.fn().mockReturnValue('rendered prompt');
+    const invokeModel = vi.fn().mockResolvedValue({
+      rawOutput: 'Relay output',
+      parsedOutput: null,
+      tokenUsage: { promptTokens: 10, completionTokens: 20, totalTokens: 30 }
+    });
+    const saveAgentRun = vi.fn().mockResolvedValue(undefined);
+
+    const runner = createAgentRunner({
+      acquire,
+      release,
+      renderPrompt,
+      invokeModel,
+      saveAgentRun
+    });
+
+    await runner.run({
+      agentType: 'outline-agent',
+      promptConfigVersion: 1,
+      projectId: 'project-1',
+      chapterNumber: null,
+      provider: 'relay-openai',
+      model: 'gpt-5.4',
+      inputSnapshot: { brief: 'Generate an outline.' }
+    });
+
+    expect(invokeModel).toHaveBeenCalledWith({
+      prompt: 'rendered prompt',
+      provider: 'relay-openai',
+      model: 'gpt-5.4',
+      baseUrl: 'https://relay.example.com/v1',
+      apiKeySecretRef: 'vault://relay/openai-compatible',
+      protocolMode: 'chat_completions'
+    });
   });
 });

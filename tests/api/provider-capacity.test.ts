@@ -20,7 +20,9 @@ describe('provider capacity route', () => {
       provider: 'openai',
       model: 'gpt-5.4',
       keyName: 'primary',
-      secretRef: 'vault://openai/primary',
+      baseUrl: 'https://relay.example.com/v1',
+      apiKeySecretRef: 'vault://relay/openai-compatible',
+      protocolMode: 'auto',
       maxConcurrentRequests: 8,
       requestsPerMinute: 120,
       tokensPerMinute: 240000,
@@ -38,7 +40,9 @@ describe('provider capacity route', () => {
         provider: 'openai',
         model: 'gpt-5.4',
         keyName: 'primary',
-        secretRef: 'vault://openai/primary',
+        baseUrl: 'https://relay.example.com/v1',
+        apiKeySecretRef: 'vault://relay/openai-compatible',
+        protocolMode: 'auto',
         maxConcurrentRequests: 8,
         requestsPerMinute: 120,
         tokensPerMinute: 240000,
@@ -57,7 +61,9 @@ describe('provider capacity route', () => {
       provider: 'openai',
       model: 'gpt-5.4',
       keyName: 'primary',
-      secretRef: 'vault://openai/primary',
+      baseUrl: 'https://relay.example.com/v1',
+      apiKeySecretRef: 'vault://relay/openai-compatible',
+      protocolMode: 'auto',
       maxConcurrentRequests: 8,
       requestsPerMinute: 120,
       tokensPerMinute: 240000,
@@ -71,7 +77,9 @@ describe('provider capacity route', () => {
         provider: 'openai',
         model: 'gpt-5.4',
         keyName: 'primary',
-        secretRef: 'vault://openai/primary',
+        baseUrl: 'https://relay.example.com/v1',
+        apiKeySecretRef: 'vault://relay/openai-compatible',
+        protocolMode: 'auto',
         maxConcurrentRequests: 8,
         requestsPerMinute: 120,
         tokensPerMinute: 240000,
@@ -95,6 +103,90 @@ describe('provider capacity route', () => {
         keyName: 'primary',
         secretRef: 'vault://openai/primary',
         maxConcurrentRequests: '8',
+        requestsPerMinute: 120,
+        tokensPerMinute: 240000,
+        dailyBudget: '50.00',
+        enabled: true,
+        priority: 1
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      message: 'Invalid provider capacity payload'
+    });
+  });
+
+  it('rejects an empty base URL', async () => {
+    const app = buildApp();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/provider-capacity',
+      payload: {
+        provider: 'openai',
+        model: 'gpt-5.4',
+        keyName: 'primary',
+        baseUrl: '',
+        apiKeySecretRef: 'vault://openai/primary',
+        protocolMode: 'responses',
+        maxConcurrentRequests: 8,
+        requestsPerMinute: 120,
+        tokensPerMinute: 240000,
+        dailyBudget: '50.00',
+        enabled: true,
+        priority: 1
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      message: 'Invalid provider capacity payload'
+    });
+  });
+
+  it('rejects an invalid protocol mode', async () => {
+    const app = buildApp();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/provider-capacity',
+      payload: {
+        provider: 'openai',
+        model: 'gpt-5.4',
+        keyName: 'primary',
+        baseUrl: 'https://relay.example.com/v1',
+        apiKeySecretRef: 'vault://openai/primary',
+        protocolMode: 'json_mode',
+        maxConcurrentRequests: 8,
+        requestsPerMinute: 120,
+        tokensPerMinute: 240000,
+        dailyBudget: '50.00',
+        enabled: true,
+        priority: 1
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      message: 'Invalid provider capacity payload'
+    });
+  });
+
+  it('rejects an empty api key secret ref', async () => {
+    const app = buildApp();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/provider-capacity',
+      payload: {
+        provider: 'openai',
+        model: 'gpt-5.4',
+        keyName: 'primary',
+        baseUrl: 'https://relay.example.com/v1',
+        apiKeySecretRef: '',
+        protocolMode: 'responses',
+        maxConcurrentRequests: 8,
         requestsPerMinute: 120,
         tokensPerMinute: 240000,
         dailyBudget: '50.00',

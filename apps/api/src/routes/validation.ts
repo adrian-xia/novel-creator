@@ -74,6 +74,10 @@ function isString(value: unknown): value is string {
   return typeof value === 'string';
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return isString(value) && value.trim().length > 0;
+}
+
 function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
@@ -164,7 +168,9 @@ export function parseProviderCapacityPayload(value: unknown): ProviderCapacityPa
     provider,
     model,
     keyName,
-    secretRef,
+    baseUrl,
+    apiKeySecretRef,
+    protocolMode,
     maxConcurrentRequests,
     requestsPerMinute,
     tokensPerMinute,
@@ -177,7 +183,9 @@ export function parseProviderCapacityPayload(value: unknown): ProviderCapacityPa
     !isString(provider) ||
     !isString(model) ||
     !isString(keyName) ||
-    !isString(secretRef) ||
+    !isNonEmptyString(baseUrl) ||
+    !isNonEmptyString(apiKeySecretRef) ||
+    !isOneOf(protocolMode, ['auto', 'responses', 'chat_completions'] as const) ||
     !isNumber(maxConcurrentRequests) ||
     !isNumber(requestsPerMinute) ||
     !isNumber(tokensPerMinute) ||
@@ -192,7 +200,9 @@ export function parseProviderCapacityPayload(value: unknown): ProviderCapacityPa
     provider,
     model,
     keyName,
-    secretRef,
+    baseUrl,
+    apiKeySecretRef,
+    protocolMode,
     maxConcurrentRequests,
     requestsPerMinute,
     tokensPerMinute,

@@ -6,6 +6,9 @@ interface AcquireRequest {
 interface CapacityLease {
   keyId: string;
   leaseId: string;
+  baseUrl: string;
+  apiKeySecretRef: string;
+  protocolMode: 'auto' | 'responses' | 'chat_completions';
 }
 
 interface TokenUsage {
@@ -28,6 +31,9 @@ interface AgentRunnerDeps {
     prompt: string;
     provider: string;
     model: string;
+    baseUrl: string;
+    apiKeySecretRef: string;
+    protocolMode: 'auto' | 'responses' | 'chat_completions';
   }) => Promise<AgentRunResult>;
   saveAgentRun: (run: Record<string, unknown>) => Promise<void>;
 }
@@ -56,7 +62,10 @@ export function createAgentRunner(deps: AgentRunnerDeps) {
         const result = await deps.invokeModel({
           prompt,
           provider: input.provider,
-          model: input.model
+          model: input.model,
+          baseUrl: lease.baseUrl,
+          apiKeySecretRef: lease.apiKeySecretRef,
+          protocolMode: lease.protocolMode
         });
 
         phase = 'recording-run';

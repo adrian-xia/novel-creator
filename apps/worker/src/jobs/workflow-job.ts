@@ -8,6 +8,7 @@ import {
   publishChapterFlow,
   reviewRewriteFlow
 } from '../../../../packages/workflows/src';
+import { createProductionWorkflowDeps } from '../../../../packages/workflows/src/production-deps';
 import { runInstrumentedWorkflow } from '../../../../packages/workflows/src/workflow-runner';
 
 export async function runWorkflowJob(
@@ -37,6 +38,6 @@ export async function runWorkflowJob(
       projectId: payload.projectId ?? 'system',
       chapterNumber: payload.chapterNumber ?? null
     },
-    deps: {}
+    deps: createProductionWorkflowDeps()
   });
 }

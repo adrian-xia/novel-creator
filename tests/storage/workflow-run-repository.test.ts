@@ -78,7 +78,7 @@ describe('WorkflowRunRepository', () => {
     expect(detail?.steps[0]?.status).toBe('succeeded');
   });
 
-  it('records failures with error messages', async () => {
+  it('stores a failed step message and failed run message', async () => {
     prisma.stepRunRecord.updateMany.mockResolvedValue({ count: 1 });
     prisma.workflowRunRecord.update.mockResolvedValue({
       id: 'workflow-run-2',
@@ -90,16 +90,16 @@ describe('WorkflowRunRepository', () => {
     );
     const repository = new WorkflowRunRepository();
 
-    await repository.markStepFailed('workflow-run-2', 'run-outline-agent', 'boom');
-    await repository.markRunFailed('workflow-run-2', 'boom');
+    await repository.markStepFailed('workflow-run-2', 'run-outline-agent', 'bad schema');
+    await repository.markRunFailed('workflow-run-2', 'bad schema');
 
     expect(prisma.stepRunRecord.updateMany).toHaveBeenCalledWith({
       where: { workflowRunId: 'workflow-run-2', stepName: 'run-outline-agent' },
-      data: { status: 'failed', errorMessage: 'boom' }
+      data: { status: 'failed', errorMessage: 'bad schema' }
     });
     expect(prisma.workflowRunRecord.update).toHaveBeenCalledWith({
       where: { id: 'workflow-run-2' },
-      data: { status: 'failed', errorMessage: 'boom' }
+      data: { status: 'failed', errorMessage: 'bad schema' }
     });
   });
 });

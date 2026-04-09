@@ -25,6 +25,16 @@ describe('runWorkflowJob', () => {
     runInstrumentedWorkflow.mockReset();
   });
 
+  const expectWorkflowDeps = (deps: unknown) => {
+    expect(deps).toEqual(
+      expect.objectContaining({
+        promptRepository: expect.any(Object),
+        projectRepository: expect.any(Object),
+        storyStateRepository: expect.any(Object)
+      })
+    );
+  };
+
   it('dispatches the decision-session workflow', async () => {
     runInstrumentedWorkflow.mockResolvedValue({
       flowName: 'decision-session-flow',
@@ -62,7 +72,7 @@ describe('runWorkflowJob', () => {
       projectId: 'project-1',
       chapterNumber: 5
     });
-    expect(decisionSessionCall?.deps).toEqual({});
+    expectWorkflowDeps(decisionSessionCall?.deps);
   });
 
   it('dispatches the chapter-replan workflow', async () => {
@@ -95,7 +105,7 @@ describe('runWorkflowJob', () => {
       projectId: 'project-2',
       chapterNumber: 8
     });
-    expect(replanCall?.deps).toEqual({});
+    expectWorkflowDeps(replanCall?.deps);
   });
 
   it('dispatches the publish-chapter workflow', async () => {
@@ -128,7 +138,26 @@ describe('runWorkflowJob', () => {
       projectId: 'project-1',
       chapterNumber: 7
     });
-    expect(publishCall?.deps).toEqual({});
+    expectWorkflowDeps(publishCall?.deps);
+  });
+
+  it('passes real workflow dependencies into runInstrumentedWorkflow', async () => {
+    runInstrumentedWorkflow.mockResolvedValue({
+      flowName: 'generate-outline-flow',
+      stepCount: 8
+    });
+
+    await runWorkflowJob('generate-outline-flow', { projectId: 'project-1' });
+
+    expect(runInstrumentedWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deps: expect.objectContaining({
+          promptRepository: expect.any(Object),
+          projectRepository: expect.any(Object),
+          storyStateRepository: expect.any(Object)
+        })
+      })
+    );
   });
 
   it('rejects unknown workflows instead of running an empty flow', async () => {

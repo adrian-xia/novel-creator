@@ -16,6 +16,23 @@ function resolveVolumeNumber(payload: Record<string, unknown>, fallback: number)
 }
 
 export class StoryStateRepository {
+  async getStoryState(projectId: string) {
+    return prisma.storyState.findUnique({
+      where: { projectId }
+    });
+  }
+
+  async getNextChapterNumber(projectId: string) {
+    const state = await this.getStoryState(projectId);
+    const nextChapterNumber = state?.currentPosition?.nextChapterNumber;
+
+    if (typeof nextChapterNumber !== 'number') {
+      throw new Error(`Story state is not ready for next chapter generation: ${projectId}`);
+    }
+
+    return nextChapterNumber;
+  }
+
   async saveOutline(input: {
     projectId: string;
     outline: Record<string, unknown>;
@@ -112,11 +129,23 @@ export class StoryStateRepository {
   }
 
   async saveChapterDraft(draft: ChapterDraft) {
-    return prisma.chapterDraftRecord.create({
-      data: {
+    return prisma.chapterDraftRecord.upsert({
+      where: {
+        projectId_chapterNumber_version: {
+          projectId: draft.projectId,
+          chapterNumber: draft.chapterNumber,
+          version: draft.version
+        }
+      },
+      create: {
         projectId: draft.projectId,
         chapterNumber: draft.chapterNumber,
         version: draft.version,
+        content: draft.content,
+        summary: draft.summary,
+        metadata: draft.metadata
+      },
+      update: {
         content: draft.content,
         summary: draft.summary,
         metadata: draft.metadata

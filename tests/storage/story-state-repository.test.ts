@@ -22,7 +22,8 @@ const prisma = vi.hoisted(() => ({
     updateMany: vi.fn()
   },
   chapterDraftRecord: {
-    create: vi.fn()
+    create: vi.fn(),
+    upsert: vi.fn()
   },
   reviewOutcomeRecord: {
     create: vi.fn()
@@ -192,6 +193,23 @@ describe('StoryStateRepository', () => {
     });
   });
 
+  it('allocates the next chapter number from story state current position', async () => {
+    prisma.storyState.findUnique.mockResolvedValue({
+      projectId: 'project-1',
+      currentPosition: { nextChapterNumber: 8, currentVolumeNumber: 2 }
+    });
+
+    const { StoryStateRepository } = await import(
+      '../../packages/storage/src/repositories/story-state-repository'
+    );
+    const repository = new StoryStateRepository();
+
+    await expect(repository.getNextChapterNumber('project-1')).resolves.toBe(8);
+    expect(prisma.storyState.findUnique).toHaveBeenCalledWith({
+      where: { projectId: 'project-1' }
+    });
+  });
+
   it('invalidates chapter plans within a replan window', async () => {
     prisma.chapterPlanRecord.updateMany.mockResolvedValue({ count: 3 });
 
@@ -252,6 +270,51 @@ describe('StoryStateRepository', () => {
       },
       update: {
         status: 'drafted'
+      }
+    });
+  });
+
+  it('upserts chapter drafts by project, chapter, and version', async () => {
+    prisma.chapterDraftRecord.upsert.mockResolvedValue({
+      projectId: 'project-1',
+      chapterNumber: 8,
+      version: 1
+    });
+
+    const { StoryStateRepository } = await import(
+      '../../packages/storage/src/repositories/story-state-repository'
+    );
+    const repository = new StoryStateRepository();
+
+    await repository.saveChapterDraft({
+      projectId: 'project-1',
+      chapterNumber: 8,
+      version: 1,
+      content: '第八章正文',
+      summary: null,
+      metadata: {}
+    });
+
+    expect(prisma.chapterDraftRecord.upsert).toHaveBeenCalledWith({
+      where: {
+        projectId_chapterNumber_version: {
+          projectId: 'project-1',
+          chapterNumber: 8,
+          version: 1
+        }
+      },
+      create: {
+        projectId: 'project-1',
+        chapterNumber: 8,
+        version: 1,
+        content: '第八章正文',
+        summary: null,
+        metadata: {}
+      },
+      update: {
+        content: '第八章正文',
+        summary: null,
+        metadata: {}
       }
     });
   });

@@ -16,7 +16,10 @@ vi.mock('../../packages/workflows/src', () => ({
   })),
   generateOutlineFlow: () => ({ name: 'generate-outline-flow', steps: ['run-outline-agent'] }),
   generateVolumeFlow: () => ({ name: 'generate-volume-flow', steps: ['run-volume-agent'] }),
-  generateChapterFlow: () => ({ name: 'generate-chapter-flow', steps: ['run-chapter-plan-agent'] }),
+  generateChapterFlow: () => ({
+    name: 'generate-chapter-flow',
+    steps: ['execute-chapter-generation']
+  }),
   reviewRewriteFlow: () => ({ name: 'review-rewrite-flow', steps: ['review-rewrite'] })
 }));
 

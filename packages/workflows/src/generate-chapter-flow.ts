@@ -1,4 +1,5 @@
 import type { WorkflowTriggerPayload } from './create-project-flow';
+import { executeGenerateChapter } from './chapter-executors';
 import type { ExecutableWorkflow } from './workflow-runtime';
 
 export interface ChapterFlowContext {
@@ -13,17 +14,6 @@ export function generateChapterFlow(): ExecutableWorkflow<
   return {
     name: 'generate-chapter-flow',
     buildInitialContext: (payload) => payload,
-    steps: [
-      { name: 'lock-project-chapter-pipeline', run: async (context) => context },
-      { name: 'load-story-state', run: async (context) => context },
-      { name: 'load-chapter-plan-prompt', run: async (context) => context },
-      { name: 'acquire-capacity', run: async (context) => context },
-      { name: 'run-chapter-plan-agent', run: async (context) => context },
-      { name: 'persist-chapter-plan', run: async (context) => context },
-      { name: 'load-chapter-draft-prompt', run: async (context) => context },
-      { name: 'run-chapter-draft-agent', run: async (context) => context },
-      { name: 'persist-chapter-draft', run: async (context) => context },
-      { name: 'mark-chapter-drafted', run: async (context) => context }
-    ]
+    steps: [{ name: 'execute-chapter-generation', run: async (context, deps) => executeGenerateChapter(context, deps) }]
   };
 }

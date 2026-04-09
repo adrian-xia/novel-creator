@@ -34,7 +34,10 @@ vi.mock('../../packages/workflows/src', () => ({
       'persist-volume-plans'
     ]
   }),
-  generateChapterFlow: () => ({ name: 'generate-chapter-flow', steps: ['run-chapter-plan-agent'] })
+  generateChapterFlow: () => ({
+    name: 'generate-chapter-flow',
+    steps: ['execute-chapter-generation']
+  })
 }));
 
 async function buildTestApp() {
@@ -77,7 +80,7 @@ describe('story production routes', () => {
       label: 'next chapter',
       url: '/projects/project-1/flows/next-chapter',
       flowName: 'generate-chapter-flow',
-      steps: ['run-chapter-plan-agent']
+      steps: ['execute-chapter-generation']
     }
   ])('creates a queued workflow run for $label generation', async ({ url, flowName, steps }) => {
     createRunMock.mockResolvedValue({

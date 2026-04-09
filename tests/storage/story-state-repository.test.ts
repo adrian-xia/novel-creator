@@ -144,6 +144,54 @@ describe('StoryStateRepository', () => {
     });
   });
 
+  it('preserves validated volume numbers when persisting volume plans', async () => {
+    prisma.volumePlanRecord.createMany.mockResolvedValue({ count: 2 });
+    prisma.storyState.upsert.mockResolvedValue({ projectId: 'project-1' });
+
+    const { StoryStateRepository } = await import(
+      '../../packages/storage/src/repositories/story-state-repository'
+    );
+    const repository = new StoryStateRepository();
+
+    await repository.saveVolumePlans({
+      projectId: 'project-1',
+      plans: [
+        { volumeNumber: 3, name: '第三卷' },
+        { volumeNumber: 4, name: '第四卷' }
+      ]
+    });
+
+    expect(prisma.volumePlanRecord.createMany).toHaveBeenCalledWith({
+      data: [
+        { projectId: 'project-1', volumeNumber: 3, payload: { volumeNumber: 3, name: '第三卷' } },
+        { projectId: 'project-1', volumeNumber: 4, payload: { volumeNumber: 4, name: '第四卷' } }
+      ]
+    });
+    expect(prisma.storyState.upsert).toHaveBeenCalledWith({
+      where: { projectId: 'project-1' },
+      create: {
+        projectId: 'project-1',
+        storyBible: null,
+        outline: null,
+        volumePlans: [
+          { volumeNumber: 3, name: '第三卷' },
+          { volumeNumber: 4, name: '第四卷' }
+        ],
+        confirmedFacts: [],
+        openForeshadowing: [],
+        chapterSummaries: [],
+        currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 3 }
+      },
+      update: {
+        volumePlans: [
+          { volumeNumber: 3, name: '第三卷' },
+          { volumeNumber: 4, name: '第四卷' }
+        ],
+        currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 3 }
+      }
+    });
+  });
+
   it('invalidates chapter plans within a replan window', async () => {
     prisma.chapterPlanRecord.updateMany.mockResolvedValue({ count: 3 });
 

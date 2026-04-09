@@ -9,6 +9,12 @@ import { prisma } from '../client';
 
 const SERIALIZABLE_ISOLATION_LEVEL = 'Serializable' as const;
 
+function resolveVolumeNumber(payload: Record<string, unknown>, fallback: number) {
+  return Number.isInteger(payload.volumeNumber) && payload.volumeNumber > 0
+    ? (payload.volumeNumber as number)
+    : fallback;
+}
+
 export class StoryStateRepository {
   async saveOutline(input: {
     projectId: string;
@@ -44,13 +50,14 @@ export class StoryStateRepository {
   }
 
   async saveVolumePlans(input: { projectId: string; plans: Array<Record<string, unknown>> }) {
-    const currentVolumeNumber = input.plans.length > 0 ? 1 : null;
+    const currentVolumeNumber =
+      input.plans.length > 0 ? resolveVolumeNumber(input.plans[0] ?? {}, 1) : null;
 
     return prisma.$transaction(async (tx) => {
       await tx.volumePlanRecord.createMany({
         data: input.plans.map((payload, index) => ({
           projectId: input.projectId,
-          volumeNumber: index + 1,
+          volumeNumber: resolveVolumeNumber(payload, index + 1),
           payload
         }))
       });

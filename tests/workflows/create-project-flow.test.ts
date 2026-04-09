@@ -19,11 +19,14 @@ describe('createProjectFlow', () => {
   it('returns the initial workflow step list', () => {
     const flow = createProjectFlow();
 
-    expect(flow.steps).toEqual([
+    expect(flow.name).toBe('create-project-flow');
+    expect(flow.steps.map((step) => step.name)).toEqual([
       'persist-project',
       'enqueue-outline',
       'mark-project-active'
     ]);
+    expect(typeof flow.buildInitialContext).toBe('function');
+    expect(typeof flow.steps[0]?.run).toBe('function');
   });
 
   it('enqueues the create-project workflow', () => {
@@ -47,16 +50,18 @@ describe('createProjectFlow', () => {
       stepCount: 3
     });
 
-    expect(runInstrumentedWorkflow).toHaveBeenCalledWith({
-      flow: {
-        name: 'create-project-flow',
-        steps: ['persist-project', 'enqueue-outline', 'mark-project-active']
-      },
-      payload: {
-        projectId: 'system',
-        chapterNumber: null
-      },
-      deps: {}
+    const call = runInstrumentedWorkflow.mock.calls[0]?.[0];
+
+    expect(call?.flow.name).toBe('create-project-flow');
+    expect(call?.flow.steps.map((step: { name: string }) => step.name)).toEqual([
+      'persist-project',
+      'enqueue-outline',
+      'mark-project-active'
+    ]);
+    expect(call?.payload).toEqual({
+      projectId: 'system',
+      chapterNumber: null
     });
+    expect(call?.deps).toEqual({});
   });
 });

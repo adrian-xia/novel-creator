@@ -41,28 +41,28 @@ describe('runWorkflowJob', () => {
       stepCount: 10
     });
 
-    expect(runInstrumentedWorkflow).toHaveBeenCalledWith({
-      flow: {
-        name: 'decision-session-flow',
-        steps: [
-          'append-human-message',
-          'load-decision-context',
-          'assemble-decision-conversation-context',
-          'run-decision-assistant',
-          'persist-assistant-message',
-          'generate-resolution-draft',
-          'persist-resolution',
-          'apply-resolution',
-          'invalidate-plans-in-window',
-          'enqueue-replan-window'
-        ]
-      },
-      payload: {
-        projectId: 'project-1',
-        chapterNumber: 5
-      },
-      deps: {}
+    const decisionSessionCall = runInstrumentedWorkflow.mock.calls[0]?.[0];
+
+    expect(decisionSessionCall?.flow.name).toBe('decision-session-flow');
+    expect(
+      decisionSessionCall?.flow.steps.map((step: { name: string }) => step.name)
+    ).toEqual([
+      'append-human-message',
+      'load-decision-context',
+      'assemble-decision-conversation-context',
+      'run-decision-assistant',
+      'persist-assistant-message',
+      'generate-resolution-draft',
+      'persist-resolution',
+      'apply-resolution',
+      'invalidate-plans-in-window',
+      'enqueue-replan-window'
+    ]);
+    expect(decisionSessionCall?.payload).toEqual({
+      projectId: 'project-1',
+      chapterNumber: 5
     });
+    expect(decisionSessionCall?.deps).toEqual({});
   });
 
   it('dispatches the chapter-replan workflow', async () => {
@@ -81,23 +81,21 @@ describe('runWorkflowJob', () => {
       stepCount: 5
     });
 
-    expect(runInstrumentedWorkflow).toHaveBeenCalledWith({
-      flow: {
-        name: 'chapter-replan-flow',
-        steps: [
-          'load-recovery-task',
-          'invalidate-plans-in-window',
-          'set-chapters-needs-replan',
-          'enqueue-replan-window',
-          'mark-recovery-task-complete'
-        ]
-      },
-      payload: {
-        projectId: 'project-2',
-        chapterNumber: 8
-      },
-      deps: {}
+    const replanCall = runInstrumentedWorkflow.mock.calls[0]?.[0];
+
+    expect(replanCall?.flow.name).toBe('chapter-replan-flow');
+    expect(replanCall?.flow.steps.map((step: { name: string }) => step.name)).toEqual([
+      'load-recovery-task',
+      'invalidate-plans-in-window',
+      'set-chapters-needs-replan',
+      'enqueue-replan-window',
+      'mark-recovery-task-complete'
+    ]);
+    expect(replanCall?.payload).toEqual({
+      projectId: 'project-2',
+      chapterNumber: 8
     });
+    expect(replanCall?.deps).toEqual({});
   });
 
   it('dispatches the publish-chapter workflow', async () => {
@@ -116,23 +114,21 @@ describe('runWorkflowJob', () => {
       stepCount: 5
     });
 
-    expect(runInstrumentedWorkflow).toHaveBeenCalledWith({
-      flow: {
-        name: 'publish-chapter-flow',
-        steps: [
-          'load-publish-profile',
-          'expand-publish-tasks',
-          'run-adapter-publishes',
-          'run-manual-exports',
-          'persist-publish-results'
-        ]
-      },
-      payload: {
-        projectId: 'project-1',
-        chapterNumber: 7
-      },
-      deps: {}
+    const publishCall = runInstrumentedWorkflow.mock.calls[0]?.[0];
+
+    expect(publishCall?.flow.name).toBe('publish-chapter-flow');
+    expect(publishCall?.flow.steps.map((step: { name: string }) => step.name)).toEqual([
+      'load-publish-profile',
+      'expand-publish-tasks',
+      'run-adapter-publishes',
+      'run-manual-exports',
+      'persist-publish-results'
+    ]);
+    expect(publishCall?.payload).toEqual({
+      projectId: 'project-1',
+      chapterNumber: 7
     });
+    expect(publishCall?.deps).toEqual({});
   });
 
   it('rejects unknown workflows instead of running an empty flow', async () => {

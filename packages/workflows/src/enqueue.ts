@@ -1,9 +1,11 @@
-import type { WorkflowDefinition } from './create-project-flow';
+import type { ExecutableWorkflow } from './workflow-runtime';
 
-export function enqueueWorkflow(flow: WorkflowDefinition) {
+type EnqueueableWorkflow = ExecutableWorkflow<unknown, unknown, unknown>;
+
+export function enqueueWorkflow(flow: EnqueueableWorkflow) {
   return {
     flowName: flow.name,
     status: 'queued' as const,
-    steps: flow.steps
+    steps: flow.steps.map((step) => step.name)
   };
 }

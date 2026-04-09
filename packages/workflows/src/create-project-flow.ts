@@ -1,16 +1,27 @@
-export interface WorkflowDefinition {
-  name: string;
-  steps: string[];
-}
+import type { ExecutableWorkflow } from './workflow-runtime';
 
 export interface WorkflowTriggerPayload {
   projectId: string;
   chapterNumber: number | null;
 }
 
-export function createProjectFlow(): WorkflowDefinition {
+export interface CreateProjectFlowContext {
+  projectId: string;
+  chapterNumber: number | null;
+}
+
+export function createProjectFlow(): ExecutableWorkflow<
+  WorkflowTriggerPayload,
+  CreateProjectFlowContext,
+  Record<string, never>
+> {
   return {
     name: 'create-project-flow',
-    steps: ['persist-project', 'enqueue-outline', 'mark-project-active']
+    buildInitialContext: (payload) => payload,
+    steps: [
+      { name: 'persist-project', run: async (context) => context },
+      { name: 'enqueue-outline', run: async (context) => context },
+      { name: 'mark-project-active', run: async (context) => context }
+    ]
   };
 }

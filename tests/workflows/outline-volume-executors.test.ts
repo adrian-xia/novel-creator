@@ -21,10 +21,11 @@ describe('outline and volume executors', () => {
       defaultModel: 'gpt-5.4',
       agentRunner: { run },
       projectRepository: {
-        findById: vi.fn().mockResolvedValue({
+        findByIdWithStoryState: vi.fn().mockResolvedValue({
           id: 'project-1',
           premise: '山门弃徒卷入王朝旧案',
-          genre: '仙侠'
+          genre: '仙侠',
+          storyState: null
         })
       },
       promptRepository: {
@@ -185,7 +186,7 @@ describe('outline and volume executors', () => {
           }
         },
         {
-          projectRepository: { findById: vi.fn() },
+          projectRepository: { findByIdWithStoryState: vi.fn() },
           promptRepository: { findLatestEnabledByAgentName: vi.fn() },
           storyStateRepository: { saveOutline: vi.fn(), saveVolumePlans: vi.fn() }
         }
@@ -232,6 +233,172 @@ describe('outline and volume executors', () => {
         rawOutlineOutput: { storyBible: '缺少标题' }
       })
     ).rejects.toThrow('Invalid outline output: missing title');
+  });
+
+  it('validates outline output from raw model JSON when parsed output is unavailable', async () => {
+    const {
+      loadOutlineProjectStep,
+      loadOutlinePromptStep,
+      runOutlineAgentStep,
+      validateOutlineOutputStep
+    } = await import(
+      '../../packages/workflows/src/outline-volume-executors'
+    );
+    const run = vi.fn().mockResolvedValue({
+      rawOutput: '{"title":"卷一","storyBible":"宗门与王朝对峙"}',
+      parsedOutput: null
+    });
+    const deps = {
+      defaultProvider: 'openai',
+      defaultModel: 'gpt-5.4',
+      agentRunner: { run },
+      projectRepository: {
+        findByIdWithStoryState: vi.fn().mockResolvedValue({
+          id: 'project-1',
+          premise: '山门弃徒卷入王朝旧案',
+          genre: '仙侠',
+          storyState: null
+        })
+      },
+      promptRepository: {
+        findLatestEnabledByAgentName: vi.fn().mockResolvedValue({
+          agentName: 'outline-agent',
+          version: 3,
+          systemPrompt: 'You are the outline planner.',
+          taskTemplate: 'Generate a serialized outline.'
+        })
+      },
+      storyStateRepository: {
+        saveOutline: vi.fn()
+      }
+    };
+
+    const loadedProject = await loadOutlineProjectStep(
+      { projectId: 'project-1', chapterNumber: null },
+      deps
+    );
+    const loadedPrompt = await loadOutlinePromptStep(loadedProject, deps);
+    const ranAgent = await runOutlineAgentStep(loadedPrompt, deps);
+
+    await expect(validateOutlineOutputStep(ranAgent)).resolves.toEqual(
+      expect.objectContaining({
+        outline: { title: '卷一' },
+        storyBible: '宗门与王朝对峙'
+      })
+    );
+  });
+
+  it('preserves the existing story bible when outline output omits it', async () => {
+    const {
+      loadOutlineProjectStep,
+      loadOutlinePromptStep,
+      runOutlineAgentStep,
+      validateOutlineOutputStep,
+      persistOutlineStep
+    } = await import(
+      '../../packages/workflows/src/outline-volume-executors'
+    );
+    const saveOutline = vi.fn().mockResolvedValue(undefined);
+    const run = vi.fn().mockResolvedValue({
+      parsedOutput: { title: '卷一' }
+    });
+    const deps = {
+      defaultProvider: 'openai',
+      defaultModel: 'gpt-5.4',
+      agentRunner: { run },
+      projectRepository: {
+        findByIdWithStoryState: vi.fn().mockResolvedValue({
+          id: 'project-1',
+          premise: '山门弃徒卷入王朝旧案',
+          genre: '仙侠',
+          storyState: {
+            storyBible: '旧版设定集'
+          }
+        })
+      },
+      promptRepository: {
+        findLatestEnabledByAgentName: vi.fn().mockResolvedValue({
+          agentName: 'outline-agent',
+          version: 3,
+          systemPrompt: 'You are the outline planner.',
+          taskTemplate: 'Generate a serialized outline.'
+        })
+      },
+      storyStateRepository: {
+        saveOutline
+      }
+    };
+
+    const loadedProject = await loadOutlineProjectStep(
+      { projectId: 'project-1', chapterNumber: null },
+      deps
+    );
+    const loadedPrompt = await loadOutlinePromptStep(loadedProject, deps);
+    const ranAgent = await runOutlineAgentStep(loadedPrompt, deps);
+    const validated = await validateOutlineOutputStep(ranAgent);
+
+    await persistOutlineStep(validated, deps);
+
+    expect(saveOutline).toHaveBeenCalledWith({
+      projectId: 'project-1',
+      outline: { title: '卷一' },
+      storyBible: '旧版设定集'
+    });
+  });
+
+  it('validates volume output from raw model JSON when parsed output is unavailable', async () => {
+    const {
+      loadVolumeOutlineStep,
+      loadVolumePromptStep,
+      runVolumeAgentStep,
+      validateVolumeOutputStep
+    } = await import(
+      '../../packages/workflows/src/outline-volume-executors'
+    );
+    const run = vi.fn().mockResolvedValue({
+      rawOutput: '{"plans":[{"volumeNumber":1,"goal":"入宗"}]}',
+      parsedOutput: null
+    });
+    const deps = {
+      defaultProvider: 'openai',
+      defaultModel: 'gpt-5.4',
+      agentRunner: { run },
+      projectRepository: {
+        findByIdWithStoryState: vi.fn().mockResolvedValue({
+          id: 'project-1',
+          premise: '山门弃徒卷入王朝旧案',
+          genre: '仙侠',
+          storyState: {
+            outline: { title: '卷一' },
+            storyBible: '宗门与王朝对峙'
+          }
+        })
+      },
+      promptRepository: {
+        findLatestEnabledByAgentName: vi.fn().mockResolvedValue({
+          agentName: 'volume-agent',
+          version: 4,
+          systemPrompt: 'You are the volume planner.',
+          taskTemplate: 'Expand the outline into volume plans.'
+        })
+      },
+      storyStateRepository: {
+        saveVolumePlans: vi.fn()
+      }
+    };
+
+    const loadedOutline = await loadVolumeOutlineStep(
+      { projectId: 'project-1', chapterNumber: null },
+      deps
+    );
+    const loadedPrompt = await loadVolumePromptStep(loadedOutline, deps);
+    const ranAgent = await runVolumeAgentStep(loadedPrompt, deps);
+
+    await expect(validateVolumeOutputStep(ranAgent)).resolves.toEqual(
+      expect.objectContaining({
+        volumePlans: [{ volumeNumber: 1, goal: '入宗' }]
+      })
+    );
   });
 
   it('fails volume validation on malformed plans', async () => {

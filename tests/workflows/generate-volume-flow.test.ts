@@ -9,11 +9,9 @@ describe('generateVolumeFlow', () => {
     expect(flow.steps.map((step) => step.name)).toEqual([
       'load-outline',
       'load-volume-prompt',
-      'acquire-capacity',
       'run-volume-agent',
       'validate-volume-output',
-      'persist-volume-plans',
-      'record-agent-run'
+      'persist-volume-plans'
     ]);
     expect(typeof flow.buildInitialContext).toBe('function');
     expect(typeof flow.steps[0]?.run).toBe('function');

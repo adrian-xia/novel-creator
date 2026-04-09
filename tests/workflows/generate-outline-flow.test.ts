@@ -9,11 +9,9 @@ describe('generateOutlineFlow', () => {
     expect(flow.steps.map((step) => step.name)).toEqual([
       'load-project-input',
       'load-outline-prompt',
-      'acquire-capacity',
       'run-outline-agent',
       'validate-outline-output',
-      'persist-outline',
-      'record-agent-run'
+      'persist-outline'
     ]);
     expect(typeof flow.buildInitialContext).toBe('function');
     expect(typeof flow.steps[0]?.run).toBe('function');

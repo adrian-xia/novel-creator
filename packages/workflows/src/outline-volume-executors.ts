@@ -17,6 +17,11 @@ export interface OutlineVolumeWorkflowDeps {
 }
 
 type OutlineProjectInput = Pick<NovelProject, 'id' | 'premise' | 'genre'>;
+type OutlineProjectWithStoryState = OutlineProjectInput & {
+  storyState?: {
+    storyBible: string | null;
+  } | null;
+};
 type VolumeProjectInput = Pick<NovelProject, 'id' | 'premise' | 'genre'> & {
   storyState?: {
     outline: Record<string, unknown> | null;
@@ -28,6 +33,31 @@ type PromptInput = Pick<
   PromptConfig,
   'id' | 'agentName' | 'version' | 'systemPrompt' | 'taskTemplate' | 'outputSchema' | 'enabled'
 >;
+
+function normalizeStructuredAgentOutput(result: {
+  rawOutput: string;
+  parsedOutput: Record<string, unknown> | null;
+}): Record<string, unknown> | null {
+  if (result.parsedOutput) {
+    return result.parsedOutput;
+  }
+
+  if (result.rawOutput.trim().length === 0) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(result.rawOutput) as unknown;
+
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
 
 function requireRuntimeConfig(deps: OutlineVolumeWorkflowDeps) {
   if (!deps.agentRunner || !deps.defaultProvider || !deps.defaultModel) {
@@ -52,7 +82,7 @@ function requireOutlineRecord(
   return outline as Record<string, unknown>;
 }
 
-function requireOutlineProject(context: OutlineFlowContext): OutlineProjectInput {
+function requireOutlineProject(context: OutlineFlowContext): OutlineProjectWithStoryState {
   if (!context.project) {
     throw new Error(`Outline project prerequisites missing for ${context.projectId}`);
   }
@@ -104,7 +134,7 @@ export async function loadOutlineProjectStep(
   context: OutlineFlowContext,
   deps: OutlineVolumeWorkflowDeps
 ): Promise<OutlineFlowContext> {
-  const project = await deps.projectRepository.findById(context.projectId);
+  const project = await deps.projectRepository.findByIdWithStoryState(context.projectId);
 
   if (!project) {
     throw new Error(`Project ${context.projectId} not found`);
@@ -158,7 +188,7 @@ export async function runOutlineAgentStep(
 
   return {
     ...context,
-    rawOutlineOutput: result.parsedOutput
+    rawOutlineOutput: normalizeStructuredAgentOutput(result)
   };
 }
 
@@ -178,10 +208,12 @@ export async function persistOutlineStep(
   context: OutlineFlowContext,
   deps: OutlineVolumeWorkflowDeps
 ): Promise<OutlineFlowContext> {
+  const project = requireOutlineProject(context);
+
   await deps.storyStateRepository.saveOutline({
     projectId: context.projectId,
     outline: requirePersistedOutline(context),
-    storyBible: context.storyBible ?? null
+    storyBible: context.storyBible ?? project.storyState?.storyBible ?? null
   });
 
   return context;
@@ -252,7 +284,7 @@ export async function runVolumeAgentStep(
 
   return {
     ...context,
-    rawVolumeOutput: result.parsedOutput
+    rawVolumeOutput: normalizeStructuredAgentOutput(result)
   };
 }
 

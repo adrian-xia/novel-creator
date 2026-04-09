@@ -15,6 +15,9 @@ export interface OutlineFlowContext {
     id: string;
     premise: string;
     genre: string;
+    storyState?: {
+      storyBible: string | null;
+    } | null;
   };
   prompt?: {
     id: string;
@@ -40,11 +43,9 @@ export function generateOutlineFlow(): ExecutableWorkflow<
     steps: [
       { name: 'load-project-input', run: async (context, deps) => loadOutlineProjectStep(context, deps) },
       { name: 'load-outline-prompt', run: async (context, deps) => loadOutlinePromptStep(context, deps) },
-      { name: 'acquire-capacity', run: async (context) => context },
       { name: 'run-outline-agent', run: async (context, deps) => runOutlineAgentStep(context, deps) },
       { name: 'validate-outline-output', run: async (context) => validateOutlineOutputStep(context) },
-      { name: 'persist-outline', run: async (context, deps) => persistOutlineStep(context, deps) },
-      { name: 'record-agent-run', run: async (context) => context }
+      { name: 'persist-outline', run: async (context, deps) => persistOutlineStep(context, deps) }
     ]
   };
 }

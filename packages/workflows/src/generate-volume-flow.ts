@@ -45,11 +45,9 @@ export function generateVolumeFlow(): ExecutableWorkflow<
     steps: [
       { name: 'load-outline', run: async (context, deps) => loadVolumeOutlineStep(context, deps) },
       { name: 'load-volume-prompt', run: async (context, deps) => loadVolumePromptStep(context, deps) },
-      { name: 'acquire-capacity', run: async (context) => context },
       { name: 'run-volume-agent', run: async (context, deps) => runVolumeAgentStep(context, deps) },
       { name: 'validate-volume-output', run: async (context) => validateVolumeOutputStep(context) },
-      { name: 'persist-volume-plans', run: async (context, deps) => persistVolumePlansStep(context, deps) },
-      { name: 'record-agent-run', run: async (context) => context }
+      { name: 'persist-volume-plans', run: async (context, deps) => persistVolumePlansStep(context, deps) }
     ]
   };
 }

@@ -19,11 +19,9 @@ vi.mock('../../packages/workflows/src', () => ({
     steps: [
       'load-project-input',
       'load-outline-prompt',
-      'acquire-capacity',
       'run-outline-agent',
       'validate-outline-output',
-      'persist-outline',
-      'record-agent-run'
+      'persist-outline'
     ]
   }),
   generateVolumeFlow: () => ({
@@ -31,11 +29,9 @@ vi.mock('../../packages/workflows/src', () => ({
     steps: [
       'load-outline',
       'load-volume-prompt',
-      'acquire-capacity',
       'run-volume-agent',
       'validate-volume-output',
-      'persist-volume-plans',
-      'record-agent-run'
+      'persist-volume-plans'
     ]
   }),
   generateChapterFlow: () => ({ name: 'generate-chapter-flow', steps: ['run-chapter-plan-agent'] })
@@ -60,11 +56,9 @@ describe('story production routes', () => {
       steps: [
         'load-project-input',
         'load-outline-prompt',
-        'acquire-capacity',
         'run-outline-agent',
         'validate-outline-output',
-        'persist-outline',
-        'record-agent-run'
+        'persist-outline'
       ]
     },
     {
@@ -74,11 +68,9 @@ describe('story production routes', () => {
       steps: [
         'load-outline',
         'load-volume-prompt',
-        'acquire-capacity',
         'run-volume-agent',
         'validate-volume-output',
-        'persist-volume-plans',
-        'record-agent-run'
+        'persist-volume-plans'
       ]
     },
     {

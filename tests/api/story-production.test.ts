@@ -14,8 +14,30 @@ vi.mock('../../packages/workflows/src', () => ({
     status: 'queued',
     steps: flow.steps
   })),
-  generateOutlineFlow: () => ({ name: 'generate-outline-flow', steps: ['run-outline-agent'] }),
-  generateVolumeFlow: () => ({ name: 'generate-volume-flow', steps: ['run-volume-agent'] }),
+  generateOutlineFlow: () => ({
+    name: 'generate-outline-flow',
+    steps: [
+      'load-project-input',
+      'load-outline-prompt',
+      'acquire-capacity',
+      'run-outline-agent',
+      'validate-outline-output',
+      'persist-outline',
+      'record-agent-run'
+    ]
+  }),
+  generateVolumeFlow: () => ({
+    name: 'generate-volume-flow',
+    steps: [
+      'load-outline',
+      'load-volume-prompt',
+      'acquire-capacity',
+      'run-volume-agent',
+      'validate-volume-output',
+      'persist-volume-plans',
+      'record-agent-run'
+    ]
+  }),
   generateChapterFlow: () => ({ name: 'generate-chapter-flow', steps: ['run-chapter-plan-agent'] })
 }));
 
@@ -35,13 +57,29 @@ describe('story production routes', () => {
       label: 'outline',
       url: '/projects/project-1/flows/outline',
       flowName: 'generate-outline-flow',
-      steps: ['run-outline-agent']
+      steps: [
+        'load-project-input',
+        'load-outline-prompt',
+        'acquire-capacity',
+        'run-outline-agent',
+        'validate-outline-output',
+        'persist-outline',
+        'record-agent-run'
+      ]
     },
     {
       label: 'volume',
       url: '/projects/project-1/flows/volume',
       flowName: 'generate-volume-flow',
-      steps: ['run-volume-agent']
+      steps: [
+        'load-outline',
+        'load-volume-prompt',
+        'acquire-capacity',
+        'run-volume-agent',
+        'validate-volume-output',
+        'persist-volume-plans',
+        'record-agent-run'
+      ]
     },
     {
       label: 'next chapter',

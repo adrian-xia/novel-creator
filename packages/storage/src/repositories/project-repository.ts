@@ -14,6 +14,15 @@ export class ProjectRepository {
     });
   }
 
+  async findByIdWithStoryState(id: string) {
+    return prisma.novelProject.findUnique({
+      where: { id },
+      include: {
+        storyState: true
+      }
+    });
+  }
+
   async exists(id: string): Promise<boolean> {
     const project = await prisma.novelProject.findUnique({
       where: { id }

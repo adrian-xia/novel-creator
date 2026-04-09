@@ -85,7 +85,23 @@ describe('StoryStateRepository', () => {
       }
     });
     expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function));
-    expect(prisma.storyState.upsert).toHaveBeenCalled();
+    expect(prisma.storyState.upsert).toHaveBeenCalledWith({
+      where: { projectId: 'project-1' },
+      create: {
+        projectId: 'project-1',
+        storyBible: '江湖与仙门并存',
+        outline: { title: '总纲', ending: '收束' },
+        volumePlans: [],
+        confirmedFacts: [],
+        openForeshadowing: [],
+        chapterSummaries: [],
+        currentPosition: { nextChapterNumber: 1, currentVolumeNumber: null }
+      },
+      update: {
+        storyBible: '江湖与仙门并存',
+        outline: { title: '总纲', ending: '收束' }
+      }
+    });
   });
 
   it('persists volume plans and story state in one transaction', async () => {
@@ -109,7 +125,23 @@ describe('StoryStateRepository', () => {
         { projectId: 'project-1', volumeNumber: 2, payload: { name: '第二卷' } }
       ]
     });
-    expect(prisma.storyState.upsert).toHaveBeenCalled();
+    expect(prisma.storyState.upsert).toHaveBeenCalledWith({
+      where: { projectId: 'project-1' },
+      create: {
+        projectId: 'project-1',
+        storyBible: null,
+        outline: null,
+        volumePlans: [{ name: '第一卷' }, { name: '第二卷' }],
+        confirmedFacts: [],
+        openForeshadowing: [],
+        chapterSummaries: [],
+        currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 1 }
+      },
+      update: {
+        volumePlans: [{ name: '第一卷' }, { name: '第二卷' }],
+        currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 1 }
+      }
+    });
   });
 
   it('invalidates chapter plans within a replan window', async () => {

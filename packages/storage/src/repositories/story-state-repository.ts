@@ -44,6 +44,8 @@ export class StoryStateRepository {
   }
 
   async saveVolumePlans(input: { projectId: string; plans: Array<Record<string, unknown>> }) {
+    const currentVolumeNumber = input.plans.length > 0 ? 1 : null;
+
     return prisma.$transaction(async (tx) => {
       await tx.volumePlanRecord.createMany({
         data: input.plans.map((payload, index) => ({
@@ -63,11 +65,11 @@ export class StoryStateRepository {
           confirmedFacts: [],
           openForeshadowing: [],
           chapterSummaries: [],
-          currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 1 }
+          currentPosition: { nextChapterNumber: 1, currentVolumeNumber }
         },
         update: {
           volumePlans: input.plans,
-          currentPosition: { nextChapterNumber: 1, currentVolumeNumber: 1 }
+          currentPosition: { nextChapterNumber: 1, currentVolumeNumber }
         }
       });
     });

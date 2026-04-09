@@ -77,6 +77,38 @@ describe('project repository contracts', () => {
     });
   });
 
+  it('loads a project together with story state for downstream workflow steps', async () => {
+    const { ProjectRepository } = await import(
+      '../../packages/storage/src/repositories/project-repository'
+    );
+    const projectWithStoryState = {
+      id: 'project-1',
+      title: '云海孤灯',
+      genre: '仙侠',
+      premise: '山门弃徒重返旧土追索真相',
+      targetChapterCount: 180,
+      chaptersPerDay: 2,
+      status: 'active',
+      storyState: {
+        projectId: 'project-1',
+        outline: { title: '卷一' },
+        storyBible: '宗门与王朝对峙'
+      }
+    };
+
+    findProjectRecord.mockResolvedValue(projectWithStoryState);
+
+    await expect(new ProjectRepository().findByIdWithStoryState('project-1')).resolves.toEqual(
+      projectWithStoryState
+    );
+    expect(findProjectRecord).toHaveBeenCalledWith({
+      where: { id: 'project-1' },
+      include: {
+        storyState: true
+      }
+    });
+  });
+
   it('checks whether a project exists through the Prisma repository', async () => {
     const { ProjectRepository } = await import(
       '../../packages/storage/src/repositories/project-repository'

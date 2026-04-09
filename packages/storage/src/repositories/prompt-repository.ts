@@ -7,4 +7,11 @@ export class PromptRepository {
       data: promptConfig
     });
   }
+
+  async findLatestEnabledByAgentName(agentName: string): Promise<PromptConfig | null> {
+    return prisma.promptConfig.findFirst({
+      where: { agentName, enabled: true },
+      orderBy: [{ version: 'desc' }, { createdAt: 'desc' }]
+    });
+  }
 }

@@ -1,4 +1,5 @@
 import type { WorkflowTriggerPayload } from './create-project-flow';
+import { executeOutlineStep } from './outline-volume-executors';
 import type { ExecutableWorkflow } from './workflow-runtime';
 
 export interface OutlineFlowContext {
@@ -17,7 +18,7 @@ export function generateOutlineFlow(): ExecutableWorkflow<
       { name: 'load-project-input', run: async (context) => context },
       { name: 'load-outline-prompt', run: async (context) => context },
       { name: 'acquire-capacity', run: async (context) => context },
-      { name: 'run-outline-agent', run: async (context) => context },
+      { name: 'run-outline-agent', run: async (context, deps) => executeOutlineStep(context, deps) },
       { name: 'validate-outline-output', run: async (context) => context },
       { name: 'persist-outline', run: async (context) => context },
       { name: 'record-agent-run', run: async (context) => context }

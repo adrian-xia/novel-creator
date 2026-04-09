@@ -77,4 +77,29 @@ describe('WorkflowRunRepository', () => {
     expect(detail?.status).toBe('succeeded');
     expect(detail?.steps[0]?.status).toBe('succeeded');
   });
+
+  it('records failures with error messages', async () => {
+    prisma.stepRunRecord.updateMany.mockResolvedValue({ count: 1 });
+    prisma.workflowRunRecord.update.mockResolvedValue({
+      id: 'workflow-run-2',
+      status: 'failed'
+    });
+
+    const { WorkflowRunRepository } = await import(
+      '../../packages/storage/src/repositories/workflow-run-repository'
+    );
+    const repository = new WorkflowRunRepository();
+
+    await repository.markStepFailed('workflow-run-2', 'run-outline-agent', 'boom');
+    await repository.markRunFailed('workflow-run-2', 'boom');
+
+    expect(prisma.stepRunRecord.updateMany).toHaveBeenCalledWith({
+      where: { workflowRunId: 'workflow-run-2', stepName: 'run-outline-agent' },
+      data: { status: 'failed', errorMessage: 'boom' }
+    });
+    expect(prisma.workflowRunRecord.update).toHaveBeenCalledWith({
+      where: { id: 'workflow-run-2' },
+      data: { status: 'failed', errorMessage: 'boom' }
+    });
+  });
 });

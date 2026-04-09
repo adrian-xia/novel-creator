@@ -13,7 +13,14 @@ export async function runInstrumentedWorkflow<TPayload, TContext, TDeps>(input: 
     chapterNumber: input.payload.chapterNumber
   });
 
-  let context = input.flow.buildInitialContext(input.payload);
+  let context: TContext;
+  try {
+    context = input.flow.buildInitialContext(input.payload);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown error';
+    await repository.markRunFailed(run.id, message);
+    throw error;
+  }
 
   for (const step of input.flow.steps) {
     await repository.markStepRunning(run.id, step.name);

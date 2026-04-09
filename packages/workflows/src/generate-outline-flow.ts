@@ -17,8 +17,11 @@ export function generateOutlineFlow(): ExecutableWorkflow<
     steps: [
       { name: 'load-project-input', run: async (context) => context },
       { name: 'load-outline-prompt', run: async (context) => context },
+      { name: 'acquire-capacity', run: async (context) => context },
       { name: 'run-outline-agent', run: async (context) => context },
-      { name: 'persist-outline', run: async (context) => context }
+      { name: 'validate-outline-output', run: async (context) => context },
+      { name: 'persist-outline', run: async (context) => context },
+      { name: 'record-agent-run', run: async (context) => context }
     ]
   };
 }

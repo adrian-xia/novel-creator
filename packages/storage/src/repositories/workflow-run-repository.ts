@@ -41,10 +41,24 @@ export class WorkflowRunRepository {
     });
   }
 
+  async markStepFailed(workflowRunId: string, stepName: string, errorMessage: string) {
+    return prisma.stepRunRecord.updateMany({
+      where: { workflowRunId, stepName },
+      data: { status: 'failed', errorMessage }
+    });
+  }
+
   async markRunSucceeded(workflowRunId: string) {
     return prisma.workflowRunRecord.update({
       where: { id: workflowRunId },
       data: { status: 'succeeded' }
+    });
+  }
+
+  async markRunFailed(workflowRunId: string, errorMessage: string) {
+    return prisma.workflowRunRecord.update({
+      where: { id: workflowRunId },
+      data: { status: 'failed', errorMessage }
     });
   }
 

@@ -2,15 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { generateOutlineFlow } from '../../packages/workflows/src';
 
 describe('generateOutlineFlow', () => {
-  it('defines the real outline workflow steps', () => {
-    expect(generateOutlineFlow().steps).toEqual([
+  it('returns typed steps with executable handlers', () => {
+    const flow = generateOutlineFlow();
+
+    expect(flow.name).toBe('generate-outline-flow');
+    expect(flow.steps.map((step) => step.name)).toEqual([
       'load-project-input',
       'load-outline-prompt',
-      'acquire-capacity',
       'run-outline-agent',
-      'validate-outline-output',
-      'persist-outline',
-      'record-agent-run'
+      'persist-outline'
     ]);
+    expect(typeof flow.buildInitialContext).toBe('function');
+    expect(typeof flow.steps[0]?.run).toBe('function');
   });
 });

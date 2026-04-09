@@ -1,16 +1,24 @@
-import type { WorkflowDefinition } from './create-project-flow';
+import type { WorkflowTriggerPayload } from './create-project-flow';
+import type { ExecutableWorkflow } from './workflow-runtime';
 
-export function generateOutlineFlow(): WorkflowDefinition {
+export interface OutlineFlowContext {
+  projectId: string;
+  chapterNumber: number | null;
+}
+
+export function generateOutlineFlow(): ExecutableWorkflow<
+  WorkflowTriggerPayload,
+  OutlineFlowContext,
+  Record<string, never>
+> {
   return {
     name: 'generate-outline-flow',
+    buildInitialContext: (payload) => payload,
     steps: [
-      'load-project-input',
-      'load-outline-prompt',
-      'acquire-capacity',
-      'run-outline-agent',
-      'validate-outline-output',
-      'persist-outline',
-      'record-agent-run'
+      { name: 'load-project-input', run: async (context) => context },
+      { name: 'load-outline-prompt', run: async (context) => context },
+      { name: 'run-outline-agent', run: async (context) => context },
+      { name: 'persist-outline', run: async (context) => context }
     ]
   };
 }

@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { reviewRewriteFlow } from '../../packages/workflows/src';
 
 describe('reviewRewriteFlow', () => {
-  it('defines a bounded review and rewrite loop entry', () => {
-    expect(reviewRewriteFlow().steps).toEqual([
+  it('returns typed steps with executable handlers', () => {
+    const flow = reviewRewriteFlow();
+
+    expect(flow.name).toBe('review-rewrite-flow');
+    expect(flow.steps.map((step) => step.name)).toEqual([
       'load-chapter-draft',
       'load-review-prompt',
       'acquire-capacity',
@@ -13,5 +16,7 @@ describe('reviewRewriteFlow', () => {
       'enqueue-decision-session-when-blocked',
       'enqueue-publish-when-approved'
     ]);
+    expect(typeof flow.buildInitialContext).toBe('function');
+    expect(typeof flow.steps[0]?.run).toBe('function');
   });
 });

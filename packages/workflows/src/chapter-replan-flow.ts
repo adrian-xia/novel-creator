@@ -1,14 +1,25 @@
-import type { WorkflowDefinition } from './create-project-flow';
+import type { WorkflowTriggerPayload } from './create-project-flow';
+import type { ExecutableWorkflow } from './workflow-runtime';
 
-export function chapterReplanFlow(): WorkflowDefinition {
+export interface ChapterReplanFlowContext {
+  projectId: string;
+  chapterNumber: number | null;
+}
+
+export function chapterReplanFlow(): ExecutableWorkflow<
+  WorkflowTriggerPayload,
+  ChapterReplanFlowContext,
+  Record<string, never>
+> {
   return {
     name: 'chapter-replan-flow',
+    buildInitialContext: (payload) => payload,
     steps: [
-      'load-recovery-task',
-      'invalidate-plans-in-window',
-      'set-chapters-needs-replan',
-      'enqueue-replan-window',
-      'mark-recovery-task-complete'
+      { name: 'load-recovery-task', run: async (context) => context },
+      { name: 'invalidate-plans-in-window', run: async (context) => context },
+      { name: 'set-chapters-needs-replan', run: async (context) => context },
+      { name: 'enqueue-replan-window', run: async (context) => context },
+      { name: 'mark-recovery-task-complete', run: async (context) => context }
     ]
   };
 }

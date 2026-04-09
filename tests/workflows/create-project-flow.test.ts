@@ -55,7 +55,8 @@ describe('createProjectFlow', () => {
       payload: {
         projectId: 'system',
         chapterNumber: null
-      }
+      },
+      deps: {}
     });
   });
 });

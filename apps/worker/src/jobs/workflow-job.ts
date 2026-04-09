@@ -36,6 +36,7 @@ export async function runWorkflowJob(
     payload: {
       projectId: payload.projectId ?? 'system',
       chapterNumber: payload.chapterNumber ?? null
-    }
+    },
+    deps: {}
   });
 }

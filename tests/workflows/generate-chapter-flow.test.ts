@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { generateChapterFlow } from '../../packages/workflows/src';
 
 describe('generateChapterFlow', () => {
-  it('defines the chapter plan and draft pipeline', () => {
-    expect(generateChapterFlow().steps).toEqual([
+  it('returns typed steps with executable handlers', () => {
+    const flow = generateChapterFlow();
+
+    expect(flow.name).toBe('generate-chapter-flow');
+    expect(flow.steps.map((step) => step.name)).toEqual([
       'lock-project-chapter-pipeline',
       'load-story-state',
       'load-chapter-plan-prompt',
@@ -15,5 +18,7 @@ describe('generateChapterFlow', () => {
       'persist-chapter-draft',
       'mark-chapter-drafted'
     ]);
+    expect(typeof flow.buildInitialContext).toBe('function');
+    expect(typeof flow.steps[0]?.run).toBe('function');
   });
 });

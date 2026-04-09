@@ -60,7 +60,8 @@ describe('runWorkflowJob', () => {
       payload: {
         projectId: 'project-1',
         chapterNumber: 5
-      }
+      },
+      deps: {}
     });
   });
 
@@ -94,7 +95,8 @@ describe('runWorkflowJob', () => {
       payload: {
         projectId: 'project-2',
         chapterNumber: 8
-      }
+      },
+      deps: {}
     });
   });
 
@@ -128,7 +130,8 @@ describe('runWorkflowJob', () => {
       payload: {
         projectId: 'project-1',
         chapterNumber: 7
-      }
+      },
+      deps: {}
     });
   });
 

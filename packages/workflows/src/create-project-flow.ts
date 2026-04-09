@@ -3,6 +3,11 @@ export interface WorkflowDefinition {
   steps: string[];
 }
 
+export interface WorkflowTriggerPayload {
+  projectId: string;
+  chapterNumber: number | null;
+}
+
 export function createProjectFlow(): WorkflowDefinition {
   return {
     name: 'create-project-flow',

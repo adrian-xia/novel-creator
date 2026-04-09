@@ -1,17 +1,28 @@
-import type { WorkflowDefinition } from './create-project-flow';
+import type { WorkflowTriggerPayload } from './create-project-flow';
+import type { ExecutableWorkflow } from './workflow-runtime';
 
-export function reviewRewriteFlow(): WorkflowDefinition {
+export interface ReviewRewriteFlowContext {
+  projectId: string;
+  chapterNumber: number | null;
+}
+
+export function reviewRewriteFlow(): ExecutableWorkflow<
+  WorkflowTriggerPayload,
+  ReviewRewriteFlowContext,
+  Record<string, never>
+> {
   return {
     name: 'review-rewrite-flow',
+    buildInitialContext: (payload) => payload,
     steps: [
-      'load-chapter-draft',
-      'load-review-prompt',
-      'acquire-capacity',
-      'run-review-agent',
-      'persist-review-outcome',
-      'branch-on-review-decision',
-      'enqueue-decision-session-when-blocked',
-      'enqueue-publish-when-approved'
+      { name: 'load-chapter-draft', run: async (context) => context },
+      { name: 'load-review-prompt', run: async (context) => context },
+      { name: 'acquire-capacity', run: async (context) => context },
+      { name: 'run-review-agent', run: async (context) => context },
+      { name: 'persist-review-outcome', run: async (context) => context },
+      { name: 'branch-on-review-decision', run: async (context) => context },
+      { name: 'enqueue-decision-session-when-blocked', run: async (context) => context },
+      { name: 'enqueue-publish-when-approved', run: async (context) => context }
     ]
   };
 }

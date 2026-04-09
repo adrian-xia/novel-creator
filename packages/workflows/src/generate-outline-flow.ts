@@ -8,8 +8,7 @@ export interface OutlineFlowContext {
 
 export function generateOutlineFlow(): ExecutableWorkflow<
   WorkflowTriggerPayload,
-  OutlineFlowContext,
-  Record<string, never>
+  OutlineFlowContext
 > {
   return {
     name: 'generate-outline-flow',

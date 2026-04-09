@@ -1,10 +1,11 @@
 import { WorkflowRunRepository } from '../../storage/src/repositories/workflow-run-repository';
+import type { WorkflowDeps } from './workflow-deps';
 import type { ExecutableWorkflow } from './workflow-runtime';
 
-export async function runInstrumentedWorkflow<TPayload, TContext, TDeps>(input: {
-  flow: ExecutableWorkflow<TPayload, TContext, TDeps>;
+export async function runInstrumentedWorkflow<TPayload, TContext>(input: {
+  flow: ExecutableWorkflow<TPayload, TContext>;
   payload: TPayload & { projectId: string; chapterNumber: number | null };
-  deps: TDeps;
+  deps: WorkflowDeps;
 }) {
   const repository = new WorkflowRunRepository();
   const run = await repository.createRun({

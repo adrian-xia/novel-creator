@@ -4,12 +4,28 @@ const { runInstrumentedWorkflow } = vi.hoisted(() => ({
   runInstrumentedWorkflow: vi.fn()
 }));
 
+const { createProductionWorkflowDeps } = vi.hoisted(() => ({
+  createProductionWorkflowDeps: vi.fn()
+}));
+
+const productionDeps = {
+  promptRepository: { name: 'prompt-repository' },
+  projectRepository: { name: 'project-repository' },
+  storyStateRepository: { name: 'story-state-repository' }
+};
+
 vi.mock('../../packages/workflows/src', async () => {
   const actual = await vi.importActual<typeof import('../../packages/workflows/src')>(
     '../../packages/workflows/src'
   );
 
   return actual;
+});
+
+vi.mock('../../packages/workflows/src/production-deps', () => {
+  return {
+    createProductionWorkflowDeps
+  };
 });
 
 vi.mock('../../packages/workflows/src/workflow-runner', () => {
@@ -23,16 +39,13 @@ import { runWorkflowJob } from '../../apps/worker/src/jobs/workflow-job';
 describe('runWorkflowJob', () => {
   beforeEach(() => {
     runInstrumentedWorkflow.mockReset();
+    createProductionWorkflowDeps.mockReset();
+    createProductionWorkflowDeps.mockReturnValue(productionDeps);
   });
 
   const expectWorkflowDeps = (deps: unknown) => {
-    expect(deps).toEqual(
-      expect.objectContaining({
-        promptRepository: expect.any(Object),
-        projectRepository: expect.any(Object),
-        storyStateRepository: expect.any(Object)
-      })
-    );
+    expect(deps).toBe(productionDeps);
+    expect(createProductionWorkflowDeps).toHaveBeenCalledTimes(1);
   };
 
   it('dispatches the decision-session workflow', async () => {
@@ -151,13 +164,10 @@ describe('runWorkflowJob', () => {
 
     expect(runInstrumentedWorkflow).toHaveBeenCalledWith(
       expect.objectContaining({
-        deps: expect.objectContaining({
-          promptRepository: expect.any(Object),
-          projectRepository: expect.any(Object),
-          storyStateRepository: expect.any(Object)
-        })
+        deps: productionDeps
       })
     );
+    expect(createProductionWorkflowDeps).toHaveBeenCalledTimes(1);
   });
 
   it('rejects unknown workflows instead of running an empty flow', async () => {

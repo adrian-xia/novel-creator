@@ -8,8 +8,7 @@ export interface DecisionSessionFlowContext {
 
 export function decisionSessionFlow(): ExecutableWorkflow<
   WorkflowTriggerPayload,
-  DecisionSessionFlowContext,
-  Record<string, never>
+  DecisionSessionFlowContext
 > {
   return {
     name: 'decision-session-flow',

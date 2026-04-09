@@ -8,8 +8,7 @@ export interface ChapterFlowContext {
 
 export function generateChapterFlow(): ExecutableWorkflow<
   WorkflowTriggerPayload,
-  ChapterFlowContext,
-  Record<string, never>
+  ChapterFlowContext
 > {
   return {
     name: 'generate-chapter-flow',

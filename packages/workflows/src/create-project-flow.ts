@@ -12,8 +12,7 @@ export interface CreateProjectFlowContext {
 
 export function createProjectFlow(): ExecutableWorkflow<
   WorkflowTriggerPayload,
-  CreateProjectFlowContext,
-  Record<string, never>
+  CreateProjectFlowContext
 > {
   return {
     name: 'create-project-flow',

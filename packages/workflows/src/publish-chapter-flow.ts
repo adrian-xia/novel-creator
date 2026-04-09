@@ -8,8 +8,7 @@ export interface PublishChapterFlowContext {
 
 export function publishChapterFlow(): ExecutableWorkflow<
   WorkflowTriggerPayload,
-  PublishChapterFlowContext,
-  Record<string, never>
+  PublishChapterFlowContext
 > {
   return {
     name: 'publish-chapter-flow',

@@ -8,8 +8,7 @@ export interface VolumeFlowContext {
 
 export function generateVolumeFlow(): ExecutableWorkflow<
   WorkflowTriggerPayload,
-  VolumeFlowContext,
-  Record<string, never>
+  VolumeFlowContext
 > {
   return {
     name: 'generate-volume-flow',

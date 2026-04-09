@@ -8,8 +8,7 @@ export interface ChapterReplanFlowContext {
 
 export function chapterReplanFlow(): ExecutableWorkflow<
   WorkflowTriggerPayload,
-  ChapterReplanFlowContext,
-  Record<string, never>
+  ChapterReplanFlowContext
 > {
   return {
     name: 'chapter-replan-flow',

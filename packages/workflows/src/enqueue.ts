@@ -1,8 +1,6 @@
 import type { ExecutableWorkflow } from './workflow-runtime';
 
-type EnqueueableWorkflow = ExecutableWorkflow<unknown, unknown, unknown>;
-
-export function enqueueWorkflow(flow: EnqueueableWorkflow) {
+export function enqueueWorkflow<TPayload, TContext>(flow: ExecutableWorkflow<TPayload, TContext>) {
   return {
     flowName: flow.name,
     status: 'queued' as const,

@@ -8,8 +8,7 @@ export interface ReviewRewriteFlowContext {
 
 export function reviewRewriteFlow(): ExecutableWorkflow<
   WorkflowTriggerPayload,
-  ReviewRewriteFlowContext,
-  Record<string, never>
+  ReviewRewriteFlowContext
 > {
   return {
     name: 'review-rewrite-flow',

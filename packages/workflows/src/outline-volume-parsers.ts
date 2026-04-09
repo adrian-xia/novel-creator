@@ -2,31 +2,54 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function isRecordArray(value: unknown): value is Array<Record<string, unknown>> {
-  return Array.isArray(value) && value.every((item) => isRecord(item));
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 export function parseOutlineOutput(output: Record<string, unknown> | null) {
-  if (!output || typeof output.title !== 'string') {
+  if (!output || !isNonEmptyString(output.title)) {
     throw new Error('Invalid outline output: missing title');
   }
 
+  const { storyBible, ...outline } = output;
+
   return {
-    outline: output,
-    storyBible: typeof output.storyBible === 'string' ? output.storyBible : null
+    outline,
+    storyBible: isNonEmptyString(storyBible) ? storyBible : null
   };
 }
 
 export function parseVolumeOutput(output: Record<string, unknown> | null) {
-  const plans =
-    (isRecordArray(output?.plans) && output.plans) ||
-    (isRecordArray(output?.volumePlans) && output.volumePlans);
+  const planEntries = output?.plans ?? output?.volumePlans;
 
-  if (!plans) {
+  if (!Array.isArray(planEntries) || planEntries.length === 0) {
     throw new Error('Invalid volume output: missing plans');
   }
 
   return {
-    plans
+    plans: planEntries.map((plan, index) => {
+      if (!isRecord(plan)) {
+        throw new Error(`Invalid volume output: plan ${index + 1} is not an object`);
+      }
+
+      const volumeNumber = 'volumeNumber' in plan ? plan.volumeNumber : index + 1;
+
+      if (!Number.isInteger(volumeNumber) || volumeNumber < 1) {
+        throw new Error(`Invalid volume output: plan ${index + 1} has invalid volumeNumber`);
+      }
+
+      if (
+        !isNonEmptyString(plan.goal) &&
+        !isNonEmptyString(plan.title) &&
+        !isNonEmptyString(plan.name)
+      ) {
+        throw new Error(`Invalid volume output: plan ${index + 1} is missing a descriptive field`);
+      }
+
+      return {
+        ...plan,
+        volumeNumber
+      };
+    })
   };
 }

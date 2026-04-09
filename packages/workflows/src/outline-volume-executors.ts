@@ -1,45 +1,33 @@
+import type { NovelProject, PromptConfig } from '@novel-creator/domain';
 import type { PromptRepository } from '../../storage/src/repositories/prompt-repository';
 import type { ProjectRepository } from '../../storage/src/repositories/project-repository';
 import type { StoryStateRepository } from '../../storage/src/repositories/story-state-repository';
 import type { OutlineFlowContext } from './generate-outline-flow';
 import type { VolumeFlowContext } from './generate-volume-flow';
 import { parseOutlineOutput, parseVolumeOutput } from './outline-volume-parsers';
+import type { WorkflowAgentRunner } from './workflow-deps';
 
-interface AgentRunnerResult {
-  parsedOutput: Record<string, unknown> | null;
-}
-
-interface AgentRunner {
-  run(input: {
-    agentType: string;
-    promptConfigVersion: number;
-    projectId: string;
-    chapterNumber: number | null;
-    provider: string;
-    model: string;
-    inputSnapshot: Record<string, unknown>;
-  }): Promise<AgentRunnerResult>;
-}
-
-interface OutlineVolumeWorkflowDeps {
+export interface OutlineVolumeWorkflowDeps {
   projectRepository: Pick<ProjectRepository, 'findById' | 'findByIdWithStoryState'>;
   promptRepository: Pick<PromptRepository, 'findLatestEnabledByAgentName'>;
   storyStateRepository: Pick<StoryStateRepository, 'saveOutline' | 'saveVolumePlans'>;
-  agentRunner?: AgentRunner;
+  agentRunner?: WorkflowAgentRunner;
   defaultProvider?: string;
   defaultModel?: string;
 }
 
-type OutlineExecutionContext = OutlineFlowContext & {
-  outline?: Record<string, unknown>;
-  storyBible?: string | null;
+type OutlineProjectInput = Pick<NovelProject, 'id' | 'premise' | 'genre'>;
+type VolumeProjectInput = Pick<NovelProject, 'id' | 'premise' | 'genre'> & {
+  storyState?: {
+    outline: Record<string, unknown> | null;
+    storyBible: string | null;
+  } | null;
 };
 
-type VolumeExecutionContext = VolumeFlowContext & {
-  outline?: Record<string, unknown>;
-  storyBible?: string | null;
-  volumePlans?: Array<Record<string, unknown>>;
-};
+type PromptInput = Pick<
+  PromptConfig,
+  'id' | 'agentName' | 'version' | 'systemPrompt' | 'taskTemplate' | 'outputSchema' | 'enabled'
+>;
 
 function requireRuntimeConfig(deps: OutlineVolumeWorkflowDeps) {
   if (!deps.agentRunner || !deps.defaultProvider || !deps.defaultModel) {
@@ -64,22 +52,92 @@ function requireOutlineRecord(
   return outline as Record<string, unknown>;
 }
 
-export async function executeOutlineStep(
+function requireOutlineProject(context: OutlineFlowContext): OutlineProjectInput {
+  if (!context.project) {
+    throw new Error(`Outline project prerequisites missing for ${context.projectId}`);
+  }
+
+  return context.project;
+}
+
+function requireOutlinePrompt(context: OutlineFlowContext): PromptInput {
+  if (!context.prompt) {
+    throw new Error(`Outline prompt prerequisites missing for ${context.projectId}`);
+  }
+
+  return context.prompt;
+}
+
+function requireVolumeProject(context: VolumeFlowContext): VolumeProjectInput {
+  if (!context.project) {
+    throw new Error(`Volume project prerequisites missing for ${context.projectId}`);
+  }
+
+  return context.project;
+}
+
+function requireVolumePrompt(context: VolumeFlowContext): PromptInput {
+  if (!context.prompt) {
+    throw new Error(`Volume prompt prerequisites missing for ${context.projectId}`);
+  }
+
+  return context.prompt;
+}
+
+function requirePersistedOutline(context: OutlineFlowContext): Record<string, unknown> {
+  if (!context.outline) {
+    throw new Error(`Validated outline missing for ${context.projectId}`);
+  }
+
+  return context.outline;
+}
+
+function requireValidatedVolumePlans(context: VolumeFlowContext): Array<Record<string, unknown>> {
+  if (!context.volumePlans) {
+    throw new Error(`Validated volume plans missing for ${context.projectId}`);
+  }
+
+  return context.volumePlans;
+}
+
+export async function loadOutlineProjectStep(
   context: OutlineFlowContext,
   deps: OutlineVolumeWorkflowDeps
-): Promise<OutlineExecutionContext> {
+): Promise<OutlineFlowContext> {
   const project = await deps.projectRepository.findById(context.projectId);
 
   if (!project) {
     throw new Error(`Project ${context.projectId} not found`);
   }
 
+  return {
+    ...context,
+    project
+  };
+}
+
+export async function loadOutlinePromptStep(
+  context: OutlineFlowContext,
+  deps: OutlineVolumeWorkflowDeps
+): Promise<OutlineFlowContext> {
   const prompt = await deps.promptRepository.findLatestEnabledByAgentName('outline-agent');
 
   if (!prompt) {
     throw new Error('Prompt config not found for outline-agent');
   }
 
+  return {
+    ...context,
+    prompt
+  };
+}
+
+export async function runOutlineAgentStep(
+  context: OutlineFlowContext,
+  deps: OutlineVolumeWorkflowDeps
+): Promise<OutlineFlowContext> {
+  const project = requireOutlineProject(context);
+  const prompt = requireOutlinePrompt(context);
   const runtime = requireRuntimeConfig(deps);
   const result = await runtime.agentRunner.run({
     agentType: 'outline-agent',
@@ -89,18 +147,25 @@ export async function executeOutlineStep(
     provider: runtime.defaultProvider,
     model: runtime.defaultModel,
     inputSnapshot: {
-      premise: project.premise,
-      genre: project.genre
+      systemPrompt: prompt.systemPrompt,
+      taskTemplate: prompt.taskTemplate,
+      variables: {
+        premise: project.premise,
+        genre: project.genre
+      }
     }
   });
 
-  const parsed = parseOutlineOutput(result.parsedOutput);
+  return {
+    ...context,
+    rawOutlineOutput: result.parsedOutput
+  };
+}
 
-  await deps.storyStateRepository.saveOutline({
-    projectId: context.projectId,
-    outline: parsed.outline,
-    storyBible: parsed.storyBible
-  });
+export async function validateOutlineOutputStep(
+  context: OutlineFlowContext
+): Promise<OutlineFlowContext> {
+  const parsed = parseOutlineOutput(context.rawOutlineOutput ?? null);
 
   return {
     ...context,
@@ -109,10 +174,23 @@ export async function executeOutlineStep(
   };
 }
 
-export async function executeVolumeStep(
+export async function persistOutlineStep(
+  context: OutlineFlowContext,
+  deps: OutlineVolumeWorkflowDeps
+): Promise<OutlineFlowContext> {
+  await deps.storyStateRepository.saveOutline({
+    projectId: context.projectId,
+    outline: requirePersistedOutline(context),
+    storyBible: context.storyBible ?? null
+  });
+
+  return context;
+}
+
+export async function loadVolumeOutlineStep(
   context: VolumeFlowContext,
   deps: OutlineVolumeWorkflowDeps
-): Promise<VolumeExecutionContext> {
+): Promise<VolumeFlowContext> {
   const project = await deps.projectRepository.findByIdWithStoryState(context.projectId);
 
   if (!project) {
@@ -120,14 +198,38 @@ export async function executeVolumeStep(
   }
 
   const outline = requireOutlineRecord(project.storyState?.outline, context.projectId);
-  const storyBible =
-    typeof project.storyState?.storyBible === 'string' ? project.storyState.storyBible : null;
+
+  return {
+    ...context,
+    project,
+    outline,
+    storyBible: typeof project.storyState?.storyBible === 'string' ? project.storyState.storyBible : null
+  };
+}
+
+export async function loadVolumePromptStep(
+  context: VolumeFlowContext,
+  deps: OutlineVolumeWorkflowDeps
+): Promise<VolumeFlowContext> {
   const prompt = await deps.promptRepository.findLatestEnabledByAgentName('volume-agent');
 
   if (!prompt) {
     throw new Error('Prompt config not found for volume-agent');
   }
 
+  return {
+    ...context,
+    prompt
+  };
+}
+
+export async function runVolumeAgentStep(
+  context: VolumeFlowContext,
+  deps: OutlineVolumeWorkflowDeps
+): Promise<VolumeFlowContext> {
+  const project = requireVolumeProject(context);
+  const prompt = requireVolumePrompt(context);
+  const outline = requireOutlineRecord(context.outline, context.projectId);
   const runtime = requireRuntimeConfig(deps);
   const result = await runtime.agentRunner.run({
     agentType: 'volume-agent',
@@ -137,24 +239,64 @@ export async function executeVolumeStep(
     provider: runtime.defaultProvider,
     model: runtime.defaultModel,
     inputSnapshot: {
-      premise: project.premise,
-      genre: project.genre,
-      outline,
-      storyBible
+      systemPrompt: prompt.systemPrompt,
+      taskTemplate: prompt.taskTemplate,
+      variables: {
+        premise: project.premise,
+        genre: project.genre,
+        outline,
+        storyBible: context.storyBible
+      }
     }
-  });
-
-  const parsed = parseVolumeOutput(result.parsedOutput);
-
-  await deps.storyStateRepository.saveVolumePlans({
-    projectId: context.projectId,
-    plans: parsed.plans
   });
 
   return {
     ...context,
-    outline,
-    storyBible,
+    rawVolumeOutput: result.parsedOutput
+  };
+}
+
+export async function validateVolumeOutputStep(
+  context: VolumeFlowContext
+): Promise<VolumeFlowContext> {
+  const parsed = parseVolumeOutput(context.rawVolumeOutput ?? null);
+
+  return {
+    ...context,
     volumePlans: parsed.plans
   };
+}
+
+export async function persistVolumePlansStep(
+  context: VolumeFlowContext,
+  deps: OutlineVolumeWorkflowDeps
+): Promise<VolumeFlowContext> {
+  await deps.storyStateRepository.saveVolumePlans({
+    projectId: context.projectId,
+    plans: requireValidatedVolumePlans(context)
+  });
+
+  return context;
+}
+
+export async function executeOutlineStep(
+  context: OutlineFlowContext,
+  deps: OutlineVolumeWorkflowDeps
+): Promise<OutlineFlowContext> {
+  const loadedProject = await loadOutlineProjectStep(context, deps);
+  const loadedPrompt = await loadOutlinePromptStep(loadedProject, deps);
+  const ranAgent = await runOutlineAgentStep(loadedPrompt, deps);
+  const validated = await validateOutlineOutputStep(ranAgent);
+  return persistOutlineStep(validated, deps);
+}
+
+export async function executeVolumeStep(
+  context: VolumeFlowContext,
+  deps: OutlineVolumeWorkflowDeps
+): Promise<VolumeFlowContext> {
+  const loadedOutline = await loadVolumeOutlineStep(context, deps);
+  const loadedPrompt = await loadVolumePromptStep(loadedOutline, deps);
+  const ranAgent = await runVolumeAgentStep(loadedPrompt, deps);
+  const validated = await validateVolumeOutputStep(ranAgent);
+  return persistVolumePlansStep(validated, deps);
 }

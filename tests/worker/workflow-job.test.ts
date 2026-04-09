@@ -11,7 +11,10 @@ const { createProductionWorkflowDeps } = vi.hoisted(() => ({
 const productionDeps = {
   promptRepository: { name: 'prompt-repository' },
   projectRepository: { name: 'project-repository' },
-  storyStateRepository: { name: 'story-state-repository' }
+  storyStateRepository: { name: 'story-state-repository' },
+  agentRunner: { run: vi.fn() },
+  defaultProvider: 'openai',
+  defaultModel: 'gpt-5.4'
 };
 
 vi.mock('../../packages/workflows/src', async () => {

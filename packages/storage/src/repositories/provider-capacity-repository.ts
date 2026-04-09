@@ -7,4 +7,15 @@ export class ProviderCapacityRepository {
       data: providerCapacity
     });
   }
+
+  async findEnabledByProviderModel(provider: string, model: string): Promise<ProviderCapacity[]> {
+    return prisma.providerCapacity.findMany({
+      where: {
+        provider,
+        model,
+        enabled: true
+      },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }]
+    });
+  }
 }

@@ -62,6 +62,11 @@ describe('createProjectFlow', () => {
       projectId: 'system',
       chapterNumber: null
     });
-    expect(call?.deps).toEqual({});
+    expect(call?.deps).toEqual(
+      expect.objectContaining({
+        defaultProvider: 'openai',
+        defaultModel: 'gpt-5.4'
+      })
+    );
   });
 });

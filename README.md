@@ -7,6 +7,15 @@
 3. `corepack pnpm --filter @novel-creator/storage prisma migrate dev`
 4. `corepack pnpm dev`
 
+## Core Production Chain
+
+- outline, volume, chapter, review/rewrite, decision-session, and publish workflows all execute through the shared worker/runtime path
+- production workflow deps assemble a real agent runner with provider-capacity leasing, prompt rendering, OpenAI-compatible invocation, and persisted agent-run audits
+- review/rewrite execution is bounded to two automatic rewrite attempts before the chapter is blocked for a manual decision trigger
+- approved chapters append summaries back into story state so later chapter planning can continue from persisted context
+- blocked review outcomes create persisted decision-session triggers for the downstream recovery flow
+- the focused production checks plus the full Vitest regression suite are expected to pass before merging workflow-chain changes
+
 ## Phase 1 Expected Behavior
 
 - `POST /projects` persists a project through the storage-backed API

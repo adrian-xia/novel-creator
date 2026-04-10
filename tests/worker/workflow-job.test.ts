@@ -12,6 +12,7 @@ const productionDeps = {
   promptRepository: { name: 'prompt-repository' },
   projectRepository: { name: 'project-repository' },
   storyStateRepository: { name: 'story-state-repository' },
+  decisionSessionRepository: { name: 'decision-session-repository' },
   agentRunner: { run: vi.fn() },
   defaultProvider: 'openai',
   defaultModel: 'gpt-5.4'

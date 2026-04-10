@@ -3,6 +3,7 @@ import { createAgentRunner } from '../../agent-runtime/src/agent-runner';
 import { renderPrompt as renderPromptTemplate } from '../../agent-runtime/src/prompt-renderer';
 import { CapacityService, type CapacityKey } from '../../llm-gateway/src/capacity-service';
 import { invokeOpenAICompatibleModel } from '../../llm-gateway/src/openai-compatible-client';
+import { DecisionSessionRepository } from '../../storage/src/repositories/decision-session-repository';
 import { ProviderCapacityRepository } from '../../storage/src/repositories/provider-capacity-repository';
 import { PromptRepository } from '../../storage/src/repositories/prompt-repository';
 import { ProjectRepository } from '../../storage/src/repositories/project-repository';
@@ -72,6 +73,7 @@ export function createProductionWorkflowDeps(): WorkflowDeps {
     promptRepository: new PromptRepository(),
     projectRepository: new ProjectRepository(),
     storyStateRepository: new StoryStateRepository(),
+    decisionSessionRepository: new DecisionSessionRepository(),
     defaultProvider: DEFAULT_PROVIDER,
     defaultModel: DEFAULT_MODEL,
     agentRunner: (() => {

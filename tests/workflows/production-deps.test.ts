@@ -12,6 +12,24 @@ vi.mock('../../packages/llm-gateway/src/openai-compatible-client', () => ({
   invokeOpenAICompatibleModel
 }));
 
+vi.mock('../../packages/storage/src/repositories/decision-session-repository', () => ({
+  DecisionSessionRepository: class {}
+}));
+
+vi.mock('../../packages/storage/src/repositories/prompt-repository', () => ({
+  PromptRepository: class {}
+}));
+
+vi.mock('../../packages/storage/src/repositories/project-repository', () => ({
+  ProjectRepository: class {}
+}));
+
+vi.mock('../../packages/storage/src/repositories/story-state-repository', () => ({
+  StoryStateRepository: class {
+    saveAgentRun = vi.fn();
+  }
+}));
+
 vi.mock('../../packages/storage/src/repositories/provider-capacity-repository', () => ({
   ProviderCapacityRepository: class {
     findEnabledByProviderModel = findEnabledByProviderModel;
@@ -42,6 +60,7 @@ describe('createProductionWorkflowDeps', () => {
     expect(deps.defaultProvider).toBe('openai');
     expect(deps.defaultModel).toBe('gpt-5.4');
     expect(deps.agentRunner).toBe(runner);
+    expect(deps.decisionSessionRepository).toBeInstanceOf(Object);
     expect(typeof capturedDeps?.acquire).toBe('function');
     expect(typeof capturedDeps?.invokeModel).toBe('function');
     expect(typeof capturedDeps?.saveAgentRun).toBe('function');

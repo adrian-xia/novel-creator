@@ -6,12 +6,14 @@ describe('chapterReplanFlow', () => {
     const flow = chapterReplanFlow();
 
     expect(flow.name).toBe('chapter-replan-flow');
-    expect(flow.steps).toEqual([
+    expect(flow.steps.map((step) => step.name)).toEqual([
       'load-recovery-task',
       'invalidate-plans-in-window',
       'set-chapters-needs-replan',
       'enqueue-replan-window',
       'mark-recovery-task-complete'
     ]);
+    expect(typeof flow.buildInitialContext).toBe('function');
+    expect(typeof flow.steps[0]?.run).toBe('function');
   });
 });

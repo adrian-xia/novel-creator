@@ -5,7 +5,7 @@ describe('decisionSessionFlow', () => {
   it('defines the decision recovery lifecycle', () => {
     const flow = decisionSessionFlow();
     expect(flow.name).toBe('decision-session-flow');
-    expect(flow.steps).toEqual([
+    expect(flow.steps.map((step) => step.name)).toEqual([
       'append-human-message',
       'load-decision-context',
       'assemble-decision-conversation-context',
@@ -17,5 +17,7 @@ describe('decisionSessionFlow', () => {
       'invalidate-plans-in-window',
       'enqueue-replan-window'
     ]);
+    expect(typeof flow.buildInitialContext).toBe('function');
+    expect(typeof flow.steps[0]?.run).toBe('function');
   });
 });

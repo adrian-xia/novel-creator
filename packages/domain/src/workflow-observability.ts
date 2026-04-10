@@ -3,7 +3,7 @@ export interface WorkflowRun {
   flowName: string;
   projectId: string;
   chapterNumber: number | null;
-  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  status: 'queued' | 'running' | 'waiting_for_human_gate' | 'succeeded' | 'failed';
   errorMessage?: string | null;
 }
 

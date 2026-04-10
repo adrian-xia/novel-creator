@@ -20,12 +20,17 @@ const prisma = vi.hoisted(() => ({
 let sessionState: {
   id: string;
   projectId: string;
-  chapterNumber: number;
+  chapterNumber: number | null;
+  gateType: string;
   triggerReason: string | null;
   sourceReviewOutcomeId: string | null;
   status: string;
   packet: Record<string, unknown>;
   contextSnapshot: Record<string, unknown>;
+  options: Array<Record<string, unknown>>;
+  recommendedOptionId: string | null;
+  selectedOptionId: string | null;
+  humanNotes: string | null;
   currentDraftResolution: Record<string, unknown> | null;
   resolvedAt: Date | null;
   updatedAt: Date;
@@ -55,11 +60,16 @@ describe('DecisionSessionRepository', () => {
       id: 'decision-session-1',
       projectId: 'project-1',
       chapterNumber: 8,
+      gateType: 'blocked_decision',
       triggerReason: null,
       sourceReviewOutcomeId: null,
       status: 'open',
       packet: { summary: 'blocked twist' },
       contextSnapshot: {},
+      options: [],
+      recommendedOptionId: null,
+      selectedOptionId: null,
+      humanNotes: null,
       currentDraftResolution: null,
       resolvedAt: null,
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -392,5 +402,150 @@ describe('DecisionSessionRepository', () => {
         currentDraftResolution: null
       }
     });
+  });
+
+  it('creates a human gate session with recommendation options and gate metadata', async () => {
+    prisma.decisionSessionRecord.create.mockImplementation(async ({ data }) => {
+      sessionState = {
+        ...sessionState,
+        ...data,
+        id: 'decision-session-3',
+        updatedAt: new Date('2026-01-03T00:00:00.000Z')
+      };
+
+      return sessionState;
+    });
+
+    const { DecisionSessionRepository } = await import(
+      '../../packages/storage/src/repositories/decision-session-repository'
+    );
+    const repository = new DecisionSessionRepository();
+
+    await repository.createHumanGateSession({
+      projectId: 'project-1',
+      chapterNumber: null,
+      gateType: 'outline_confirmation',
+      triggerReason: 'outline_ready_for_confirmation',
+      contextSnapshot: { outlineVersion: 1 },
+      options: [
+        {
+          optionId: 'accept-outline',
+          title: '直接采用',
+          strategy: 'recommended',
+          rationale: '结构完整，可直接推进。',
+          impactSummary: '立即进入卷规划。',
+          patch: { action: 'accept' }
+        }
+      ],
+      recommendedOptionId: 'accept-outline'
+    });
+
+    expect(prisma.decisionSessionRecord.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        gateType: 'outline_confirmation',
+        options: expect.any(Array),
+        recommendedOptionId: 'accept-outline',
+        selectedOptionId: null,
+        humanNotes: null
+      })
+    });
+  });
+
+  it('rejects a human gate session when the recommended option is missing', async () => {
+    const { DecisionSessionRepository } = await import(
+      '../../packages/storage/src/repositories/decision-session-repository'
+    );
+    const repository = new DecisionSessionRepository();
+
+    await expect(
+      repository.createHumanGateSession({
+        projectId: 'project-1',
+        chapterNumber: null,
+        gateType: 'outline_confirmation',
+        triggerReason: 'outline_ready_for_confirmation',
+        contextSnapshot: { outlineVersion: 1 },
+        options: [
+          {
+            optionId: 'accept-outline',
+            title: '直接采用',
+            strategy: 'recommended',
+            rationale: '结构完整，可直接推进。',
+            impactSummary: '立即进入卷规划。',
+            patch: { action: 'accept' }
+          }
+        ],
+        recommendedOptionId: 'missing-option'
+      })
+    ).rejects.toThrow('Recommended option missing-option does not exist in gate options');
+
+    expect(prisma.decisionSessionRecord.create).not.toHaveBeenCalled();
+  });
+
+  it('confirms a human gate session with the chosen option and notes', async () => {
+    prisma.decisionSessionRecord.findUnique.mockResolvedValue({
+      options: [
+        {
+          optionId: 'accept-outline',
+          title: '直接采用'
+        }
+      ]
+    });
+    prisma.decisionSessionRecord.update.mockImplementation(async ({ data }) => {
+      sessionState = {
+        ...sessionState,
+        ...data
+      };
+
+      return sessionState;
+    });
+
+    const { DecisionSessionRepository } = await import(
+      '../../packages/storage/src/repositories/decision-session-repository'
+    );
+    const repository = new DecisionSessionRepository();
+
+    await repository.confirmHumanGate('decision-session-1', {
+      selectedOptionId: 'accept-outline',
+      humanNotes: '按推荐方案继续'
+    });
+
+    expect(prisma.decisionSessionRecord.findUnique).toHaveBeenCalledWith({
+      where: { id: 'decision-session-1' },
+      select: { options: true }
+    });
+    expect(prisma.decisionSessionRecord.update).toHaveBeenCalledWith({
+      where: { id: 'decision-session-1' },
+      data: {
+        status: 'resolved',
+        selectedOptionId: 'accept-outline',
+        humanNotes: '按推荐方案继续',
+        resolvedAt: expect.any(Date)
+      }
+    });
+  });
+
+  it('rejects human gate confirmation when the chosen option is missing', async () => {
+    prisma.decisionSessionRecord.findUnique.mockResolvedValue({
+      options: [
+        {
+          optionId: 'accept-outline',
+          title: '直接采用'
+        }
+      ]
+    });
+
+    const { DecisionSessionRepository } = await import(
+      '../../packages/storage/src/repositories/decision-session-repository'
+    );
+    const repository = new DecisionSessionRepository();
+
+    await expect(
+      repository.confirmHumanGate('decision-session-1', {
+        selectedOptionId: 'missing-option',
+        humanNotes: null
+      })
+    ).rejects.toThrow('Selected option missing-option does not exist in gate options');
+
+    expect(prisma.decisionSessionRecord.update).not.toHaveBeenCalled();
   });
 });

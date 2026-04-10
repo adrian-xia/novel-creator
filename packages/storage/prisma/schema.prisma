@@ -176,12 +176,17 @@ model PublishProfileRecord {
 model DecisionSessionRecord {
   id                    String   @id @default(uuid())
   projectId             String
-  chapterNumber         Int
+  chapterNumber         Int?
+  gateType              String   @default("blocked_decision")
   triggerReason         String?
   sourceReviewOutcomeId String?
   status                String
   packet                Json
   contextSnapshot       Json
+  options               Json     @default("[]")
+  recommendedOptionId   String?
+  selectedOptionId      String?
+  humanNotes            String?
   currentDraftResolution Json?
   resolvedAt            DateTime?
   createdAt             DateTime @default(now())

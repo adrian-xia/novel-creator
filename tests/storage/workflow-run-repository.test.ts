@@ -73,6 +73,15 @@ describe('WorkflowRunRepository', () => {
     await repository.markStepSucceeded(run.id, 'expand-publish-tasks');
     await repository.markRunSucceeded(run.id);
 
+    expect(prisma.stepRunRecord.updateMany).toHaveBeenCalledWith({
+      where: { workflowRunId: run.id, stepName: 'expand-publish-tasks' },
+      data: { status: 'succeeded', errorMessage: null }
+    });
+    expect(prisma.workflowRunRecord.update).toHaveBeenCalledWith({
+      where: { id: run.id },
+      data: { status: 'succeeded', errorMessage: null }
+    });
+
     const detail = await repository.getRunDetail(run.id);
     expect(detail?.status).toBe('succeeded');
     expect(detail?.steps[0]?.status).toBe('succeeded');
@@ -100,6 +109,29 @@ describe('WorkflowRunRepository', () => {
     expect(prisma.workflowRunRecord.update).toHaveBeenCalledWith({
       where: { id: 'workflow-run-2' },
       data: { status: 'failed', errorMessage: 'bad schema' }
+    });
+  });
+
+  it('marks a workflow run as waiting_for_human_gate with the gate session id', async () => {
+    prisma.workflowRunRecord.update.mockResolvedValue({
+      id: 'workflow-run-3',
+      status: 'waiting_for_human_gate',
+      errorMessage: 'Waiting for human gate session session-123'
+    });
+
+    const { WorkflowRunRepository } = await import(
+      '../../packages/storage/src/repositories/workflow-run-repository'
+    );
+    const repository = new WorkflowRunRepository();
+
+    await repository.markRunWaitingForHumanGate('workflow-run-1', 'session-123');
+
+    expect(prisma.workflowRunRecord.update).toHaveBeenCalledWith({
+      where: { id: 'workflow-run-1' },
+      data: {
+        status: 'waiting_for_human_gate',
+        errorMessage: 'Waiting for human gate session session-123'
+      }
     });
   });
 });

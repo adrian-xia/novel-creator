@@ -37,7 +37,7 @@ export class WorkflowRunRepository {
   async markStepSucceeded(workflowRunId: string, stepName: string) {
     return prisma.stepRunRecord.updateMany({
       where: { workflowRunId, stepName },
-      data: { status: 'succeeded' }
+      data: { status: 'succeeded', errorMessage: null }
     });
   }
 
@@ -51,7 +51,7 @@ export class WorkflowRunRepository {
   async markRunSucceeded(workflowRunId: string) {
     return prisma.workflowRunRecord.update({
       where: { id: workflowRunId },
-      data: { status: 'succeeded' }
+      data: { status: 'succeeded', errorMessage: null }
     });
   }
 
@@ -59,6 +59,16 @@ export class WorkflowRunRepository {
     return prisma.workflowRunRecord.update({
       where: { id: workflowRunId },
       data: { status: 'failed', errorMessage }
+    });
+  }
+
+  async markRunWaitingForHumanGate(workflowRunId: string, sessionId: string) {
+    return prisma.workflowRunRecord.update({
+      where: { id: workflowRunId },
+      data: {
+        status: 'waiting_for_human_gate',
+        errorMessage: `Waiting for human gate session ${sessionId}`
+      }
     });
   }
 

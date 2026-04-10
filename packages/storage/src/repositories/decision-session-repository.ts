@@ -2,6 +2,15 @@ import type { DecisionMessage, DecisionResolution } from '@novel-creator/domain'
 import { prisma } from '../client';
 
 const SERIALIZABLE_ISOLATION_LEVEL = 'Serializable' as const;
+type GateOptionRecord = Record<string, unknown> & { optionId?: string };
+
+function hasOptionId(options: GateOptionRecord[], optionId: string | null) {
+  if (optionId === null) {
+    return true;
+  }
+
+  return options.some((option) => option.optionId === optionId);
+}
 
 function rehydrateResolution<T extends {
   replanRangeStartChapter?: number | null;
@@ -61,6 +70,39 @@ export class DecisionSessionRepository {
       triggerReason: input.triggerReason,
       sourceReviewOutcomeId: null,
       contextSnapshot: input.packet
+    });
+  }
+
+  async createHumanGateSession(input: {
+    projectId: string;
+    chapterNumber: number | null;
+    gateType: string;
+    triggerReason: string | null;
+    packet?: Record<string, unknown>;
+    contextSnapshot: Record<string, unknown>;
+    options: GateOptionRecord[];
+    recommendedOptionId: string | null;
+  }) {
+    if (!hasOptionId(input.options, input.recommendedOptionId)) {
+      throw new Error(`Recommended option ${input.recommendedOptionId} does not exist in gate options`);
+    }
+
+    return prisma.decisionSessionRecord.create({
+      data: {
+        projectId: input.projectId,
+        chapterNumber: input.chapterNumber,
+        gateType: input.gateType,
+        triggerReason: input.triggerReason,
+        status: 'open',
+        packet: input.packet ?? input.contextSnapshot,
+        contextSnapshot: input.contextSnapshot,
+        options: input.options,
+        recommendedOptionId: input.recommendedOptionId,
+        selectedOptionId: null,
+        humanNotes: null,
+        sourceReviewOutcomeId: null,
+        currentDraftResolution: null
+      }
     });
   }
 
@@ -190,6 +232,34 @@ export class DecisionSessionRepository {
     return prisma.decisionSessionRecord.update({
       where: { id: sessionId },
       data: { status: 'cancelled' }
+    });
+  }
+
+  async confirmHumanGate(sessionId: string, input: {
+    selectedOptionId: string;
+    humanNotes: string | null;
+  }) {
+    const session = await prisma.decisionSessionRecord.findUnique({
+      where: { id: sessionId },
+      select: { options: true }
+    });
+
+    if (!session) {
+      throw new Error(`Decision session ${sessionId} was not found`);
+    }
+
+    if (!hasOptionId(session.options as GateOptionRecord[], input.selectedOptionId)) {
+      throw new Error(`Selected option ${input.selectedOptionId} does not exist in gate options`);
+    }
+
+    return prisma.decisionSessionRecord.update({
+      where: { id: sessionId },
+      data: {
+        status: 'resolved',
+        selectedOptionId: input.selectedOptionId,
+        humanNotes: input.humanNotes,
+        resolvedAt: new Date()
+      }
     });
   }
 }

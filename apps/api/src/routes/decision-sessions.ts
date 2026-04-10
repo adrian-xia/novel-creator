@@ -8,7 +8,9 @@ import {
 import {
   chapterReplanFlow,
   decisionSessionFlow,
-  enqueueWorkflow
+  enqueueWorkflow,
+  generateChapterFlow,
+  generateVolumeFlow
 } from '../../../../packages/workflows/src';
 
 function toSessionSummary(record: {
@@ -90,6 +92,33 @@ async function getDecisionSessionRepository() {
   return new DecisionSessionRepository();
 }
 
+function buildNextWork(session: {
+  gateType?: string | null;
+  selectedOptionId?: string | null;
+}) {
+  if (
+    session.gateType === 'outline_confirmation'
+    && session.selectedOptionId === 'accept-outline'
+  ) {
+    return {
+      ...enqueueWorkflow(generateVolumeFlow()),
+      autoEnqueued: false as const
+    };
+  }
+
+  if (
+    session.gateType === 'volume_confirmation'
+    && session.selectedOptionId === 'accept-volume-plans'
+  ) {
+    return {
+      ...enqueueWorkflow(generateChapterFlow()),
+      autoEnqueued: false as const
+    };
+  }
+
+  return null;
+}
+
 export function registerDecisionSessionRoutes(app: FastifyInstance) {
   app.get('/decision-sessions', async () => {
     const projectRepository = await getProjectRepository();
@@ -169,12 +198,14 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
         selectedOptionId,
         humanNotes: typeof body.humanNotes === 'string' ? body.humanNotes.trim() || null : null
       });
+      const nextWork = buildNextWork(session);
 
       return reply.send({
         sessionId,
         status: session.status,
         selectedOptionId: session.selectedOptionId,
-        humanNotes: session.humanNotes
+        humanNotes: session.humanNotes,
+        ...(nextWork ? { nextWork } : {})
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to confirm human gate';

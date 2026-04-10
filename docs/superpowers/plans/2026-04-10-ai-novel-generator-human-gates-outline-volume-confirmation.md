@@ -627,7 +627,7 @@ git commit -m "feat: expose human gate confirmation controls"
 - Modify: `tests/api/decision-sessions.test.ts`
 - Modify: `tests/e2e/phase-3-smoke.test.ts`
 
-- [ ] **Step 1: Write the failing resume tests**
+- [x] **Step 1: Write the failing resume tests**
 
 ```ts
 it('returns generate-volume work after confirming an outline gate', async () => {
@@ -656,12 +656,12 @@ it('returns generate-volume work after confirming an outline gate', async () => 
 });
 ```
 
-- [ ] **Step 2: Run the resume tests to verify they fail**
+- [x] **Step 2: Run the resume tests to verify they fail**
 
 Run: `pnpm vitest run tests/api/decision-sessions.test.ts tests/e2e/phase-3-smoke.test.ts`
 Expected: FAIL because confirming a gate does not yet declare which workflow should run next.
 
-- [ ] **Step 3: Return follow-up workflow metadata for confirmed outline and volume gates**
+- [x] **Step 3: Return follow-up workflow metadata for confirmed outline and volume gates**
 
 ```ts
 // apps/api/src/routes/decision-sessions.ts
@@ -690,12 +690,12 @@ return reply.send({
 });
 ```
 
-- [ ] **Step 4: Run the resume tests to verify they pass**
+- [x] **Step 4: Run the resume tests to verify they pass**
 
 Run: `pnpm vitest run tests/api/decision-sessions.test.ts tests/e2e/phase-3-smoke.test.ts`
 Expected: PASS with outline confirmation handing off to volume generation and volume confirmation handing off to chapter generation metadata.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/routes/decision-sessions.ts \

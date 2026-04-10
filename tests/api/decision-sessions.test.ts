@@ -332,6 +332,109 @@ describe('decision session routes', () => {
     await app.close();
   });
 
+  it('returns generate-volume work after confirming an outline gate', async () => {
+    confirmHumanGateMock.mockResolvedValue({
+      id: 'session-outline-1',
+      gateType: 'outline_confirmation',
+      projectId: 'project-1',
+      chapterNumber: null,
+      status: 'resolved',
+      selectedOptionId: 'accept-outline',
+      humanNotes: null
+    });
+
+    const app = await buildTestApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/decision-sessions/session-outline-1/confirm',
+      payload: {
+        selectedOptionId: 'accept-outline',
+        humanNotes: null
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      sessionId: 'session-outline-1',
+      status: 'resolved',
+      selectedOptionId: 'accept-outline',
+      humanNotes: null,
+      nextWork: {
+        flowName: 'generate-volume-flow',
+        status: 'queued',
+        autoEnqueued: false
+      }
+    });
+    await app.close();
+  });
+
+  it('returns generate-chapter work after confirming a volume gate', async () => {
+    confirmHumanGateMock.mockResolvedValue({
+      id: 'session-volume-1',
+      gateType: 'volume_confirmation',
+      projectId: 'project-1',
+      chapterNumber: null,
+      status: 'resolved',
+      selectedOptionId: 'accept-volume-plans',
+      humanNotes: '这一卷可以开写了。'
+    });
+
+    const app = await buildTestApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/decision-sessions/session-volume-1/confirm',
+      payload: {
+        selectedOptionId: 'accept-volume-plans',
+        humanNotes: '这一卷可以开写了。'
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      sessionId: 'session-volume-1',
+      status: 'resolved',
+      selectedOptionId: 'accept-volume-plans',
+      humanNotes: '这一卷可以开写了。',
+      nextWork: {
+        flowName: 'generate-chapter-flow',
+        status: 'queued',
+        autoEnqueued: false
+      }
+    });
+    await app.close();
+  });
+
+  it('does not return nextWork when the chosen gate option is not the resume option', async () => {
+    confirmHumanGateMock.mockResolvedValue({
+      id: 'session-outline-2',
+      gateType: 'outline_confirmation',
+      projectId: 'project-1',
+      chapterNumber: null,
+      status: 'resolved',
+      selectedOptionId: 'revise-outline',
+      humanNotes: '先调整总纲。'
+    });
+
+    const app = await buildTestApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/decision-sessions/session-outline-2/confirm',
+      payload: {
+        selectedOptionId: 'revise-outline',
+        humanNotes: '先调整总纲。'
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      sessionId: 'session-outline-2',
+      status: 'resolved',
+      selectedOptionId: 'revise-outline',
+      humanNotes: '先调整总纲。'
+    });
+    await app.close();
+  });
+
   it('rejects an invalid human gate confirmation payload', async () => {
     const app = await buildTestApp();
     const response = await app.inject({

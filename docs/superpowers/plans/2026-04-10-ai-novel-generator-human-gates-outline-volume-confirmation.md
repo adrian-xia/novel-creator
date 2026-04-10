@@ -347,7 +347,7 @@ git commit -m "feat: persist human gate sessions and paused workflow runs"
 - Modify: `tests/workflows/workflow-runner.test.ts`
 - Modify: `tests/workflows/outline-volume-executors.test.ts`
 
-- [ ] **Step 1: Write the failing workflow tests**
+- [x] **Step 1: Write the failing workflow tests**
 
 ```ts
 it('marks the workflow run as waiting_for_human_gate when a step requests confirmation', async () => {
@@ -403,12 +403,12 @@ it('creates an outline confirmation gate after persisting outline output', async
 });
 ```
 
-- [ ] **Step 2: Run the workflow tests to verify they fail**
+- [x] **Step 2: Run the workflow tests to verify they fail**
 
 Run: `pnpm vitest run tests/workflows/workflow-runner.test.ts tests/workflows/outline-volume-executors.test.ts`
 Expected: FAIL because the workflow runner cannot pause for gates and the outline/volume executors do not create confirmation sessions.
 
-- [ ] **Step 3: Add the pause signal and create gates from the outline/volume executors**
+- [x] **Step 3: Add the pause signal and create gates from the outline/volume executors**
 
 ```ts
 // packages/workflows/src/human-gate.ts
@@ -461,12 +461,12 @@ const session = await deps.decisionSessionRepository.createHumanGateSession({
 requestHumanGate(session.id);
 ```
 
-- [ ] **Step 4: Run the workflow tests to verify they pass**
+- [x] **Step 4: Run the workflow tests to verify they pass**
 
 Run: `pnpm vitest run tests/workflows/workflow-runner.test.ts tests/workflows/outline-volume-executors.test.ts`
 Expected: PASS with outline and volume flows pausing cleanly after creating gate sessions.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/workflows/src/human-gate.ts \

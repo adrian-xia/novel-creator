@@ -1,9 +1,11 @@
 import type { NovelProject, PromptConfig } from '@novel-creator/domain';
+import type { DecisionSessionRepository } from '../../storage/src/repositories/decision-session-repository';
 import type { PromptRepository } from '../../storage/src/repositories/prompt-repository';
 import type { ProjectRepository } from '../../storage/src/repositories/project-repository';
 import type { StoryStateRepository } from '../../storage/src/repositories/story-state-repository';
 import type { OutlineFlowContext } from './generate-outline-flow';
 import type { VolumeFlowContext } from './generate-volume-flow';
+import { requestHumanGate } from './human-gate';
 import { parseOutlineOutput, parseVolumeOutput } from './outline-volume-parsers';
 import type { WorkflowAgentRunner } from './workflow-deps';
 
@@ -15,6 +17,10 @@ export interface OutlineVolumeWorkflowDeps {
   defaultProvider?: string;
   defaultModel?: string;
 }
+
+type OutlineVolumeHumanGateReaderDeps = {
+  decisionSessionRepository: Pick<DecisionSessionRepository, 'listSessions'>;
+};
 
 type OutlineProjectInput = Pick<NovelProject, 'id' | 'premise' | 'genre'>;
 type OutlineProjectWithStoryState = OutlineProjectInput & {
@@ -33,6 +39,48 @@ type PromptInput = Pick<
   PromptConfig,
   'id' | 'agentName' | 'version' | 'systemPrompt' | 'taskTemplate' | 'outputSchema' | 'enabled'
 >;
+
+function buildOutlineGateOptions() {
+  return [
+    {
+      optionId: 'accept-outline',
+      title: 'Use this outline',
+      strategy: 'recommended',
+      rationale: 'The generated outline is persisted and ready for confirmation.',
+      impactSummary: 'Approve to continue into volume planning with the saved outline.',
+      patch: { action: 'accept_outline' }
+    },
+    {
+      optionId: 'revise-outline',
+      title: 'Revise outline',
+      strategy: 'alternative',
+      rationale: 'Pause here if the outline needs human edits or a refreshed outline pass.',
+      impactSummary: 'Keeps the saved outline available for review before any volume plans are generated.',
+      patch: { action: 'revise_outline' }
+    }
+  ] as const;
+}
+
+function buildVolumeGateOptions() {
+  return [
+    {
+      optionId: 'accept-volume-plans',
+      title: 'Use these volume plans',
+      strategy: 'recommended',
+      rationale: 'The generated volume plans are persisted and ready for confirmation.',
+      impactSummary: 'Approve to continue with the saved volume structure.',
+      patch: { action: 'accept_volume_plans' }
+    },
+    {
+      optionId: 'revise-volume-plans',
+      title: 'Revise volume plans',
+      strategy: 'alternative',
+      rationale: 'Pause here if the volume breakdown needs human edits or a refreshed planning pass.',
+      impactSummary: 'Keeps the saved plans available for review before downstream chapter work begins.',
+      patch: { action: 'revise_volume_plans' }
+    }
+  ] as const;
+}
 
 function normalizeStructuredAgentOutput(result: {
   rawOutput: string;
@@ -130,6 +178,28 @@ function requireValidatedVolumePlans(context: VolumeFlowContext): Array<Record<s
   return context.volumePlans;
 }
 
+async function requireResolvedGate(
+  deps: OutlineVolumeHumanGateReaderDeps,
+  projectId: string,
+  gateType: 'outline_confirmation' | 'volume_confirmation',
+  acceptedOptionId: string
+) {
+  const latestGate = (await deps.decisionSessionRepository.listSessions())
+    .filter((session) => session.projectId === projectId && session.gateType === gateType)
+    .sort((left, right) => {
+      const leftTime = new Date(left.updatedAt ?? 0).getTime();
+      const rightTime = new Date(right.updatedAt ?? 0).getTime();
+
+      return rightTime - leftTime;
+    })[0];
+
+  if (!latestGate || latestGate.status !== 'resolved' || latestGate.selectedOptionId !== acceptedOptionId) {
+    throw new Error(
+      `Human gate ${gateType} must be accepted with ${acceptedOptionId} before continuing project ${projectId}`
+    );
+  }
+}
+
 export async function loadOutlineProjectStep(
   context: OutlineFlowContext,
   deps: OutlineVolumeWorkflowDeps
@@ -206,23 +276,42 @@ export async function validateOutlineOutputStep(
 
 export async function persistOutlineStep(
   context: OutlineFlowContext,
-  deps: OutlineVolumeWorkflowDeps
+  deps: OutlineVolumeWorkflowDeps & {
+    decisionSessionRepository: Pick<DecisionSessionRepository, 'createHumanGateSession'>;
+  }
 ): Promise<OutlineFlowContext> {
   const project = requireOutlineProject(context);
+  const outline = requirePersistedOutline(context);
+  const storyBible = context.storyBible ?? project.storyState?.storyBible ?? null;
 
   await deps.storyStateRepository.saveOutline({
     projectId: context.projectId,
-    outline: requirePersistedOutline(context),
-    storyBible: context.storyBible ?? project.storyState?.storyBible ?? null
+    outline,
+    storyBible
   });
 
-  return context;
+  const session = await deps.decisionSessionRepository.createHumanGateSession({
+    projectId: context.projectId,
+    chapterNumber: context.chapterNumber,
+    gateType: 'outline_confirmation',
+    triggerReason: 'outline_ready_for_confirmation',
+    contextSnapshot: {
+      outline,
+      storyBible
+    },
+    options: [...buildOutlineGateOptions()],
+    recommendedOptionId: 'accept-outline'
+  });
+
+  requestHumanGate(session.id);
 }
 
 export async function loadVolumeOutlineStep(
   context: VolumeFlowContext,
-  deps: OutlineVolumeWorkflowDeps
+  deps: OutlineVolumeWorkflowDeps & OutlineVolumeHumanGateReaderDeps
 ): Promise<VolumeFlowContext> {
+  await requireResolvedGate(deps, context.projectId, 'outline_confirmation', 'accept-outline');
+
   const project = await deps.projectRepository.findByIdWithStoryState(context.projectId);
 
   if (!project) {
@@ -301,19 +390,39 @@ export async function validateVolumeOutputStep(
 
 export async function persistVolumePlansStep(
   context: VolumeFlowContext,
-  deps: OutlineVolumeWorkflowDeps
+  deps: OutlineVolumeWorkflowDeps & {
+    decisionSessionRepository: Pick<DecisionSessionRepository, 'createHumanGateSession'>;
+  }
 ): Promise<VolumeFlowContext> {
+  const volumePlans = requireValidatedVolumePlans(context);
+
   await deps.storyStateRepository.saveVolumePlans({
     projectId: context.projectId,
-    plans: requireValidatedVolumePlans(context)
+    plans: volumePlans
   });
 
-  return context;
+  const session = await deps.decisionSessionRepository.createHumanGateSession({
+    projectId: context.projectId,
+    chapterNumber: context.chapterNumber,
+    gateType: 'volume_confirmation',
+    triggerReason: 'volume_plans_ready_for_confirmation',
+    contextSnapshot: {
+      outline: requireOutlineRecord(context.outline, context.projectId),
+      storyBible: context.storyBible ?? null,
+      volumePlans
+    },
+    options: [...buildVolumeGateOptions()],
+    recommendedOptionId: 'accept-volume-plans'
+  });
+
+  requestHumanGate(session.id);
 }
 
 export async function executeOutlineStep(
   context: OutlineFlowContext,
-  deps: OutlineVolumeWorkflowDeps
+  deps: OutlineVolumeWorkflowDeps & {
+    decisionSessionRepository: Pick<DecisionSessionRepository, 'createHumanGateSession'>;
+  }
 ): Promise<OutlineFlowContext> {
   const loadedProject = await loadOutlineProjectStep(context, deps);
   const loadedPrompt = await loadOutlinePromptStep(loadedProject, deps);
@@ -324,7 +433,9 @@ export async function executeOutlineStep(
 
 export async function executeVolumeStep(
   context: VolumeFlowContext,
-  deps: OutlineVolumeWorkflowDeps
+  deps: OutlineVolumeWorkflowDeps & OutlineVolumeHumanGateReaderDeps & {
+    decisionSessionRepository: Pick<DecisionSessionRepository, 'createHumanGateSession' | 'listSessions'>;
+  }
 ): Promise<VolumeFlowContext> {
   const loadedOutline = await loadVolumeOutlineStep(context, deps);
   const loadedPrompt = await loadVolumePromptStep(loadedOutline, deps);

@@ -5,6 +5,11 @@ import type {
   DecisionMessage,
   DecisionResolution,
   DecisionSession,
+  HumanGateOption,
+  HumanGateSession,
+  HumanGateType,
+  HumanGateOptionStrategy,
+  HumanGateSessionStatus,
   ReplanRange
 } from '../../packages/domain/src';
 
@@ -84,5 +89,49 @@ describe('phase 4 decision contracts', () => {
       | 'paused_by_decision'
       | 'failed'
     >();
+  });
+
+  it('exposes reusable human gate types for confirmation workflows', () => {
+    expectTypeOf<HumanGateType>().toEqualTypeOf<
+      | 'outline_confirmation'
+      | 'volume_confirmation'
+      | 'blocked_decision'
+      | 'resume_confirmation'
+    >();
+
+    expectTypeOf<HumanGateOptionStrategy>().toEqualTypeOf<
+      | 'recommended'
+      | 'alternative'
+      | 'custom_seed'
+    >();
+
+    expectTypeOf<HumanGateOption>().toEqualTypeOf<{
+      optionId: string;
+      title: string;
+      strategy: HumanGateOptionStrategy;
+      rationale: string;
+      impactSummary: string;
+      patch: Record<string, unknown>;
+    }>();
+
+    expectTypeOf<HumanGateSessionStatus>().toEqualTypeOf<
+      | 'open'
+      | 'awaiting_confirmation'
+      | 'confirmed'
+      | 'cancelled'
+    >();
+
+    expectTypeOf<HumanGateSession>().toEqualTypeOf<{
+      id: string;
+      projectId: string;
+      chapterNumber: number | null;
+      gateType: HumanGateType;
+      status: HumanGateSessionStatus;
+      contextSnapshot: Record<string, unknown>;
+      options: HumanGateOption[];
+      recommendedOptionId: string | null;
+      selectedOptionId: string | null;
+      humanNotes: string | null;
+    }>();
   });
 });

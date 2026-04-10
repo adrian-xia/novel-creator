@@ -7,3 +7,4 @@ export * from './publishing';
 export * from './export-execution';
 export * from './workflow-observability';
 export * from './story-state';
+export * from './human-gate';

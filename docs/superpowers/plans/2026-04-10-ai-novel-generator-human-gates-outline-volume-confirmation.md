@@ -488,7 +488,7 @@ git commit -m "feat: pause outline and volume workflows for human confirmation"
 - Modify: `tests/web/decision-session-page.test.tsx`
 - Modify: `tests/web/decision-queue-page.test.tsx`
 
-- [ ] **Step 1: Write the failing API and UI tests**
+- [x] **Step 1: Write the failing API and UI tests**
 
 ```ts
 it('confirms a human gate with the selected option and free-text notes', async () => {
@@ -524,12 +524,12 @@ expect(html).toContain('采用推荐方案');
 expect(html).toContain('取消 Gate');
 ```
 
-- [ ] **Step 2: Run the API and UI tests to verify they fail**
+- [x] **Step 2: Run the API and UI tests to verify they fail**
 
 Run: `pnpm vitest run tests/api/decision-sessions.test.ts tests/web/decision-session-page.test.tsx tests/web/decision-queue-page.test.tsx`
 Expected: FAIL because the routes and pages do not yet expose gate recommendation metadata or confirmation/cancellation actions.
 
-- [ ] **Step 3: Add the confirm/cancel routes and render recommendation-first UI**
+- [x] **Step 3: Add the confirm/cancel routes and render recommendation-first UI**
 
 ```ts
 // apps/api/src/routes/decision-sessions.ts
@@ -601,12 +601,12 @@ export async function cancelHumanGate(sessionId: string) {
 </section>
 ```
 
-- [ ] **Step 4: Run the API and UI tests to verify they pass**
+- [x] **Step 4: Run the API and UI tests to verify they pass**
 
 Run: `pnpm vitest run tests/api/decision-sessions.test.ts tests/web/decision-session-page.test.tsx tests/web/decision-queue-page.test.tsx`
 Expected: PASS with users able to view recommendation options and confirm or cancel gate sessions.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/routes/decision-sessions.ts \

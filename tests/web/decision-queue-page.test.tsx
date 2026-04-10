@@ -26,7 +26,10 @@ describe('DecisionQueuePage', () => {
             chapterNumber: 8,
             status: 'awaiting_human_input',
             triggerReason: 'Continuity conflict detected in chapter review.',
-            updatedAt: '2026-04-02T00:00:00.000Z'
+            updatedAt: '2026-04-02T00:00:00.000Z',
+            gateType: 'outline_confirmation',
+            recommendedOptionId: 'accept-outline',
+            selectedOptionId: null
           }
         ]
       })
@@ -40,5 +43,7 @@ describe('DecisionQueuePage', () => {
     expect(html).toContain('session-123');
     expect(html).toContain('Continuity conflict detected in chapter review.');
     expect(html).toContain('awaiting_human_input');
+    expect(html).toContain('outline_confirmation');
+    expect(html).toContain('accept-outline');
   });
 });

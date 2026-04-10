@@ -14,10 +14,13 @@ import {
 function toSessionSummary(record: {
   id: string;
   projectId: string;
-  chapterNumber: number;
+  chapterNumber: number | null;
   status: string;
   triggerReason: string | null;
   updatedAt: Date | string;
+  gateType?: string | null;
+  recommendedOptionId?: string | null;
+  selectedOptionId?: string | null;
 }) {
   return {
     sessionId: record.id,
@@ -25,14 +28,17 @@ function toSessionSummary(record: {
     chapterNumber: record.chapterNumber,
     status: record.status,
     triggerReason: record.triggerReason,
-    updatedAt: record.updatedAt instanceof Date ? record.updatedAt.toISOString() : record.updatedAt
+    updatedAt: record.updatedAt instanceof Date ? record.updatedAt.toISOString() : record.updatedAt,
+    gateType: record.gateType ?? null,
+    recommendedOptionId: record.recommendedOptionId ?? null,
+    selectedOptionId: record.selectedOptionId ?? null
   };
 }
 
 function toSessionDetail(record: {
   id: string;
   projectId: string;
-  chapterNumber: number;
+  chapterNumber: number | null;
   status: string;
   triggerReason: string | null;
   updatedAt: Date | string;
@@ -40,9 +46,19 @@ function toSessionDetail(record: {
   messages: Array<Record<string, unknown>>;
   resolution: Record<string, unknown> | null;
   currentDraftResolution?: Record<string, unknown> | null;
+  gateType?: string | null;
+  options?: Array<Record<string, unknown>>;
+  recommendedOptionId?: string | null;
+  selectedOptionId?: string | null;
+  humanNotes?: string | null;
 }) {
   return {
     ...toSessionSummary(record),
+    gateType: record.gateType ?? null,
+    options: Array.isArray(record.options) ? record.options : [],
+    recommendedOptionId: record.recommendedOptionId ?? null,
+    selectedOptionId: record.selectedOptionId ?? null,
+    humanNotes: record.humanNotes ?? null,
     packet: record.packet,
     messages: record.messages.map((message) => ({
       ...message,
@@ -129,6 +145,60 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
       },
       assistantWork: enqueueWorkflow(decisionSessionFlow())
     });
+  });
+
+  app.post('/decision-sessions/:sessionId/confirm', async (request, reply) => {
+    const { sessionId } = request.params as { sessionId: string };
+    const body =
+      typeof request.body === 'object' && request.body !== null
+        ? (request.body as Record<string, unknown>)
+        : {};
+    const selectedOptionId =
+      typeof body.selectedOptionId === 'string' ? body.selectedOptionId.trim() : '';
+
+    if (selectedOptionId.length === 0) {
+      return reply.code(400).send({
+        message: 'Invalid gate confirmation payload'
+      });
+    }
+
+    const repository = await getDecisionSessionRepository();
+
+    try {
+      const session = await repository.confirmHumanGate(sessionId, {
+        selectedOptionId,
+        humanNotes: typeof body.humanNotes === 'string' ? body.humanNotes.trim() || null : null
+      });
+
+      return reply.send({
+        sessionId,
+        status: session.status,
+        selectedOptionId: session.selectedOptionId,
+        humanNotes: session.humanNotes
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to confirm human gate';
+
+      return reply.code(400).send({ message });
+    }
+  });
+
+  app.post('/decision-sessions/:sessionId/cancel', async (request, reply) => {
+    const { sessionId } = request.params as { sessionId: string };
+    const repository = await getDecisionSessionRepository();
+
+    try {
+      const session = await repository.cancelSession(sessionId);
+
+      return reply.send({
+        sessionId,
+        status: session.status
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to cancel human gate';
+
+      return reply.code(400).send({ message });
+    }
   });
 
   app.post('/decision-sessions/:sessionId/generate-resolution', async (request, reply) => {

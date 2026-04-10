@@ -15,8 +15,13 @@ export default async function DecisionQueuePage() {
             <li key={item.sessionId}>
               <a href={`/decision-sessions/${item.sessionId}`}>{item.sessionId}</a>
               <div>Project: {item.projectId}</div>
-              <div>Chapter: {item.chapterNumber}</div>
+              <div>Chapter: {item.chapterNumber ?? 'N/A'}</div>
               <div>Status: {item.status}</div>
+              {item.gateType ? <div>Gate Type: {item.gateType}</div> : null}
+              {item.recommendedOptionId ? (
+                <div>Recommended Option: {item.recommendedOptionId}</div>
+              ) : null}
+              {item.selectedOptionId ? <div>Selected Option: {item.selectedOptionId}</div> : null}
               <div>{item.triggerReason ?? 'No trigger reason provided.'}</div>
             </li>
           ))}

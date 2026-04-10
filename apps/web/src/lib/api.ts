@@ -29,10 +29,13 @@ async function postJson<T>(input: RequestInfo | URL, body: unknown): Promise<T> 
 type DecisionQueueItem = {
   sessionId: string;
   projectId: string;
-  chapterNumber: number;
+  chapterNumber: number | null;
   status: string;
   triggerReason: string | null;
   updatedAt: string;
+  gateType: string | null;
+  recommendedOptionId: string | null;
+  selectedOptionId: string | null;
 };
 
 type DecisionQueueResponse = {
@@ -51,10 +54,22 @@ type DecisionSessionMessage = {
 type DecisionSessionDetail = {
   sessionId: string;
   projectId?: string;
-  chapterNumber?: number;
+  chapterNumber?: number | null;
   status?: string;
   triggerReason?: string | null;
   updatedAt?: string;
+  gateType?: string | null;
+  options?: Array<{
+    optionId: string;
+    title: string;
+    strategy: string;
+    rationale: string;
+    impactSummary: string;
+    patch: Record<string, unknown>;
+  }>;
+  recommendedOptionId?: string | null;
+  selectedOptionId?: string | null;
+  humanNotes?: string | null;
   packet: Record<string, unknown>;
   messages: DecisionSessionMessage[];
   resolution: Record<string, unknown> | null;
@@ -96,6 +111,18 @@ type DecisionSessionMessageResponse = {
   status: string;
   appendedMessage: Record<string, unknown>;
   assistantWork: Record<string, unknown>;
+};
+
+type HumanGateConfirmationResponse = {
+  sessionId: string;
+  status: string;
+  selectedOptionId: string | null;
+  humanNotes: string | null;
+};
+
+type HumanGateCancellationResponse = {
+  sessionId: string;
+  status: string;
 };
 
 type DecisionResolutionDraftResponse = {
@@ -202,6 +229,23 @@ export async function confirmDecisionResolution(
   return postJson<DecisionResolutionResponse>(
     `${API_BASE_URL}/decision-sessions/${sessionId}/resolve`,
     payload
+  );
+}
+
+export async function confirmHumanGate(
+  sessionId: string,
+  payload: { selectedOptionId: string; humanNotes: string | null }
+) {
+  return postJson<HumanGateConfirmationResponse>(
+    `${API_BASE_URL}/decision-sessions/${sessionId}/confirm`,
+    payload
+  );
+}
+
+export async function cancelHumanGate(sessionId: string) {
+  return postJson<HumanGateCancellationResponse>(
+    `${API_BASE_URL}/decision-sessions/${sessionId}/cancel`,
+    {}
   );
 }
 

@@ -28,6 +28,19 @@ describe('decideReviewNextState', () => {
     });
   });
 
+  it('requests rewrite while still within the automatic rewrite limit', () => {
+    expect(
+      decideReviewNextState({
+        decision: 'rewrite',
+        rewriteCount: 1,
+        triggeredManualDecision: false
+      })
+    ).toEqual({
+      chapterState: 'needs_rewrite',
+      shouldRewrite: true
+    });
+  });
+
   it('blocks a direct manual-block decision', () => {
     expect(
       decideReviewNextState({

@@ -6,16 +6,7 @@ describe('reviewRewriteFlow', () => {
     const flow = reviewRewriteFlow();
 
     expect(flow.name).toBe('review-rewrite-flow');
-    expect(flow.steps.map((step) => step.name)).toEqual([
-      'load-chapter-draft',
-      'load-review-prompt',
-      'acquire-capacity',
-      'run-review-agent',
-      'persist-review-outcome',
-      'branch-on-review-decision',
-      'enqueue-decision-session-when-blocked',
-      'enqueue-publish-when-approved'
-    ]);
+    expect(flow.steps.map((step) => step.name)).toEqual(['execute-review-rewrite']);
     expect(typeof flow.buildInitialContext).toBe('function');
     expect(typeof flow.steps[0]?.run).toBe('function');
   });

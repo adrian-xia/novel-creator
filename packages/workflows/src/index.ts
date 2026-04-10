@@ -10,6 +10,7 @@ export * from './decision-session-flow';
 export * from './publish-chapter-flow';
 export * from './review-policy';
 export * from './review-rewrite-flow';
+export * from './review-rewrite-executors';
 export * from './outline-volume-executors';
 export * from './outline-volume-parsers';
 export * from './workflow-deps';

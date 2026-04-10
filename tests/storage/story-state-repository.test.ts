@@ -22,6 +22,7 @@ const prisma = vi.hoisted(() => ({
     updateMany: vi.fn()
   },
   chapterDraftRecord: {
+    findFirst: vi.fn(),
     create: vi.fn(),
     upsert: vi.fn()
   },
@@ -316,6 +317,31 @@ describe('StoryStateRepository', () => {
         summary: null,
         metadata: {}
       }
+    });
+  });
+
+  it('loads the latest chapter draft by descending version', async () => {
+    prisma.chapterDraftRecord.findFirst.mockResolvedValue({
+      projectId: 'project-1',
+      chapterNumber: 8,
+      version: 3,
+      content: '第三版正文'
+    });
+
+    const { StoryStateRepository } = await import(
+      '../../packages/storage/src/repositories/story-state-repository'
+    );
+    const repository = new StoryStateRepository();
+
+    await expect(repository.getLatestChapterDraft('project-1', 8)).resolves.toEqual({
+      projectId: 'project-1',
+      chapterNumber: 8,
+      version: 3,
+      content: '第三版正文'
+    });
+    expect(prisma.chapterDraftRecord.findFirst).toHaveBeenCalledWith({
+      where: { projectId: 'project-1', chapterNumber: 8 },
+      orderBy: [{ version: 'desc' }]
     });
   });
 

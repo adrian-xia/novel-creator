@@ -153,6 +153,13 @@ export class StoryStateRepository {
     });
   }
 
+  async getLatestChapterDraft(projectId: string, chapterNumber: number) {
+    return prisma.chapterDraftRecord.findFirst({
+      where: { projectId, chapterNumber },
+      orderBy: [{ version: 'desc' }]
+    });
+  }
+
   async saveChapterState(input: {
     projectId: string;
     chapterNumber: number;

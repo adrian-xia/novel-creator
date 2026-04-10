@@ -48,6 +48,22 @@ export class DecisionSessionRepository {
     });
   }
 
+  async createBlockingDecisionTrigger(input: {
+    projectId: string;
+    chapterNumber: number;
+    triggerReason: string;
+    packet: Record<string, unknown>;
+  }) {
+    return this.createSession({
+      projectId: input.projectId,
+      chapterNumber: input.chapterNumber,
+      packet: input.packet,
+      triggerReason: input.triggerReason,
+      sourceReviewOutcomeId: null,
+      contextSnapshot: input.packet
+    });
+  }
+
   async appendMessage(message: DecisionMessage) {
     return prisma.$transaction(async (tx) => {
       const latestMessage = await tx.decisionMessageRecord.findFirst({

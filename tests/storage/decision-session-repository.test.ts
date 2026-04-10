@@ -343,4 +343,54 @@ describe('DecisionSessionRepository', () => {
       invalidateExistingPlans: true
     });
   });
+
+  it('creates a blocking decision trigger through the session creation boundary', async () => {
+    prisma.decisionSessionRecord.create.mockImplementation(async ({ data }) => {
+      sessionState = {
+        ...sessionState,
+        ...data,
+        id: 'decision-session-2',
+        updatedAt: new Date('2026-01-02T00:00:00.000Z')
+      };
+
+      return sessionState;
+    });
+
+    const { DecisionSessionRepository } = await import(
+      '../../packages/storage/src/repositories/decision-session-repository'
+    );
+    const repository = new DecisionSessionRepository();
+
+    await repository.createBlockingDecisionTrigger({
+      projectId: 'project-1',
+      chapterNumber: 8,
+      triggerReason: 'review_blocked',
+      packet: {
+        projectId: 'project-1',
+        chapterNumber: 8,
+        reason: 'rewrite limit reached'
+      }
+    });
+
+    expect(prisma.decisionSessionRecord.create).toHaveBeenCalledWith({
+      data: {
+        projectId: 'project-1',
+        chapterNumber: 8,
+        status: 'open',
+        packet: {
+          projectId: 'project-1',
+          chapterNumber: 8,
+          reason: 'rewrite limit reached'
+        },
+        triggerReason: 'review_blocked',
+        sourceReviewOutcomeId: null,
+        contextSnapshot: {
+          projectId: 'project-1',
+          chapterNumber: 8,
+          reason: 'rewrite limit reached'
+        },
+        currentDraftResolution: null
+      }
+    });
+  });
 });

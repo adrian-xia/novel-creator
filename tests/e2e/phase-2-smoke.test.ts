@@ -20,7 +20,10 @@ vi.mock('../../packages/workflows/src', () => ({
     name: 'generate-chapter-flow',
     steps: ['execute-chapter-generation']
   }),
-  reviewRewriteFlow: () => ({ name: 'review-rewrite-flow', steps: ['review-rewrite'] })
+  reviewRewriteFlow: () => ({
+    name: 'review-rewrite-flow',
+    steps: ['execute-review-rewrite']
+  })
 }));
 
 async function buildTestApp() {

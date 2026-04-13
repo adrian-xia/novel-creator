@@ -5,6 +5,7 @@ const getDecisionQueueMock = vi.fn();
 const appendMessageMock = vi.fn();
 const saveDraftResolutionMock = vi.fn();
 const saveResolutionMock = vi.fn();
+const createRunMock = vi.fn();
 
 vi.mock('../../packages/storage/src/repositories/project-repository', () => ({
   ProjectRepository: class {
@@ -20,6 +21,12 @@ vi.mock('../../packages/storage/src/repositories/decision-session-repository', (
   }
 }));
 
+vi.mock('../../packages/storage/src/repositories/workflow-run-repository', () => ({
+  WorkflowRunRepository: class {
+    createRun = createRunMock;
+  }
+}));
+
 async function buildTestApp() {
   const { buildApp } = await import('../../apps/api/src/app');
   return buildApp();
@@ -29,6 +36,10 @@ describe('phase 4 decision-session smoke', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    createRunMock.mockResolvedValue({
+      id: 'workflow-run-review-1',
+      status: 'queued'
+    });
   });
 
   it('exposes real decision-session and recovery surfaces', async () => {
@@ -56,6 +67,8 @@ describe('phase 4 decision-session smoke', () => {
     });
     saveResolutionMock.mockResolvedValue({
       id: 'session-1',
+      projectId: 'project-1',
+      chapterNumber: 8,
       status: 'resolved'
     });
 

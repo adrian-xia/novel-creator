@@ -398,6 +398,50 @@ describe('StoryStateRepository', () => {
     });
   });
 
+  it('rewinds story state to a recovery chapter and trims later summaries', async () => {
+    prisma.storyState.findUnique.mockResolvedValue({
+      projectId: 'project-1',
+      chapterSummaries: [
+        { chapterNumber: 6, summary: '第六章摘要' },
+        { chapterNumber: 7, summary: '第七章摘要' },
+        { chapterNumber: 8, summary: '第八章摘要' }
+      ],
+      currentPosition: { nextChapterNumber: 9, currentVolumeNumber: 2 }
+    });
+    prisma.storyState.update.mockResolvedValue({
+      projectId: 'project-1',
+      chapterSummaries: [
+        { chapterNumber: 6, summary: '第六章摘要' },
+        { chapterNumber: 7, summary: '第七章摘要' }
+      ],
+      currentPosition: { nextChapterNumber: 8, currentVolumeNumber: 2 }
+    });
+
+    const { StoryStateRepository } = await import(
+      '../../packages/storage/src/repositories/story-state-repository'
+    );
+    const repository = new StoryStateRepository();
+
+    await repository.rewindStoryStateToChapter({
+      projectId: 'project-1',
+      resumeFromChapter: 8
+    });
+
+    expect(prisma.storyState.findUnique).toHaveBeenCalledWith({
+      where: { projectId: 'project-1' }
+    });
+    expect(prisma.storyState.update).toHaveBeenCalledWith({
+      where: { projectId: 'project-1' },
+      data: {
+        chapterSummaries: [
+          { chapterNumber: 6, summary: '第六章摘要' },
+          { chapterNumber: 7, summary: '第七章摘要' }
+        ],
+        currentPosition: { nextChapterNumber: 8, currentVolumeNumber: 2 }
+      }
+    });
+  });
+
   it('persists workflow-decided chapter state through the chapter state helper', async () => {
     prisma.chapterStateRecord.upsert.mockResolvedValue({
       projectId: 'project-1',

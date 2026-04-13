@@ -5,6 +5,7 @@ const getSessionDetailMock = vi.fn();
 const appendMessageMock = vi.fn();
 const confirmHumanGateMock = vi.fn();
 const cancelSessionMock = vi.fn();
+const createRunMock = vi.fn();
 
 vi.mock('../../packages/storage/src/repositories/project-repository', () => ({
   ProjectRepository: class {
@@ -21,6 +22,12 @@ vi.mock('../../packages/storage/src/repositories/decision-session-repository', (
   }
 }));
 
+vi.mock('../../packages/storage/src/repositories/workflow-run-repository', () => ({
+  WorkflowRunRepository: class {
+    createRun = createRunMock;
+  }
+}));
+
 async function buildTestApp() {
   const { buildApp } = await import('../../apps/api/src/app');
   return buildApp();
@@ -30,6 +37,10 @@ describe('decision session routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    createRunMock.mockResolvedValue({
+      id: 'workflow-run-1',
+      status: 'queued'
+    });
   });
 
   it('returns a decision queue response', async () => {
@@ -360,10 +371,16 @@ describe('decision session routes', () => {
       selectedOptionId: 'accept-outline',
       humanNotes: null,
       nextWork: {
+        workflowRunId: 'workflow-run-1',
         flowName: 'generate-volume-flow',
         status: 'queued',
-        autoEnqueued: false
+        autoEnqueued: true
       }
+    });
+    expect(createRunMock).toHaveBeenCalledWith({
+      flowName: 'generate-volume-flow',
+      projectId: 'project-1',
+      chapterNumber: null
     });
     await app.close();
   });
@@ -396,10 +413,16 @@ describe('decision session routes', () => {
       selectedOptionId: 'accept-volume-plans',
       humanNotes: '这一卷可以开写了。',
       nextWork: {
+        workflowRunId: 'workflow-run-1',
         flowName: 'generate-chapter-flow',
         status: 'queued',
-        autoEnqueued: false
+        autoEnqueued: true
       }
+    });
+    expect(createRunMock).toHaveBeenCalledWith({
+      flowName: 'generate-chapter-flow',
+      projectId: 'project-1',
+      chapterNumber: null
     });
     await app.close();
   });
@@ -432,6 +455,7 @@ describe('decision session routes', () => {
       selectedOptionId: 'revise-outline',
       humanNotes: '先调整总纲。'
     });
+    expect(createRunMock).not.toHaveBeenCalled();
     await app.close();
   });
 

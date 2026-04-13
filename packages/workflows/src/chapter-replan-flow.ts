@@ -1,4 +1,5 @@
 import type { WorkflowTriggerPayload } from './create-project-flow';
+import { executeChapterReplan } from './chapter-replan-executors';
 import type { ExecutableWorkflow } from './workflow-runtime';
 
 export interface ChapterReplanFlowContext {
@@ -14,7 +15,7 @@ export function chapterReplanFlow(): ExecutableWorkflow<
     name: 'chapter-replan-flow',
     buildInitialContext: (payload) => payload,
     steps: [
-      { name: 'load-recovery-task', run: async (context) => context },
+      { name: 'load-recovery-task', run: async (context, deps) => executeChapterReplan(context, deps) },
       { name: 'invalidate-plans-in-window', run: async (context) => context },
       { name: 'set-chapters-needs-replan', run: async (context) => context },
       { name: 'enqueue-replan-window', run: async (context) => context },

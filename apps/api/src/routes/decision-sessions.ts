@@ -10,6 +10,7 @@ import {
   decisionSessionFlow,
   enqueueWorkflow,
   generateChapterFlow,
+  reviewRewriteFlow,
   generateVolumeFlow
 } from '../../../../packages/workflows/src';
 
@@ -92,28 +93,67 @@ async function getDecisionSessionRepository() {
   return new DecisionSessionRepository();
 }
 
-function buildNextWork(session: {
+async function getWorkflowRunRepository() {
+  const { WorkflowRunRepository } = await import(
+    '../../../../packages/storage/src/repositories/workflow-run-repository'
+  );
+  return new WorkflowRunRepository();
+}
+
+async function getDecisionRecoveryRepository() {
+  const { DecisionRecoveryRepository } = await import(
+    '../../../../packages/storage/src/repositories/decision-recovery-repository'
+  );
+  return new DecisionRecoveryRepository();
+}
+
+async function queueWorkflow(input: {
+  flow: ReturnType<
+    typeof generateVolumeFlow | typeof generateChapterFlow | typeof reviewRewriteFlow | typeof chapterReplanFlow
+  >;
+  projectId: string;
+  chapterNumber: number | null;
+}) {
+  const repository = await getWorkflowRunRepository();
+  const workflowRun = await repository.createRun({
+    flowName: input.flow.name,
+    projectId: input.projectId,
+    chapterNumber: input.chapterNumber
+  });
+
+  return {
+    workflowRunId: workflowRun.id,
+    ...enqueueWorkflow(input.flow),
+    autoEnqueued: true as const
+  };
+}
+
+async function buildNextWork(session: {
   gateType?: string | null;
+  projectId: string;
+  chapterNumber: number | null;
   selectedOptionId?: string | null;
 }) {
   if (
     session.gateType === 'outline_confirmation'
     && session.selectedOptionId === 'accept-outline'
   ) {
-    return {
-      ...enqueueWorkflow(generateVolumeFlow()),
-      autoEnqueued: false as const
-    };
+    return queueWorkflow({
+      flow: generateVolumeFlow(),
+      projectId: session.projectId,
+      chapterNumber: null
+    });
   }
 
   if (
     session.gateType === 'volume_confirmation'
     && session.selectedOptionId === 'accept-volume-plans'
   ) {
-    return {
-      ...enqueueWorkflow(generateChapterFlow()),
-      autoEnqueued: false as const
-    };
+    return queueWorkflow({
+      flow: generateChapterFlow(),
+      projectId: session.projectId,
+      chapterNumber: null
+    });
   }
 
   return null;
@@ -191,17 +231,17 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
       });
     }
 
-    const repository = await getDecisionSessionRepository();
+      const repository = await getDecisionSessionRepository();
 
-    try {
-      const session = await repository.confirmHumanGate(sessionId, {
-        selectedOptionId,
-        humanNotes: typeof body.humanNotes === 'string' ? body.humanNotes.trim() || null : null
-      });
-      const nextWork = buildNextWork(session);
+      try {
+        const session = await repository.confirmHumanGate(sessionId, {
+          selectedOptionId,
+          humanNotes: typeof body.humanNotes === 'string' ? body.humanNotes.trim() || null : null
+        });
+        const nextWork = await buildNextWork(session);
 
-      return reply.send({
-        sessionId,
+        return reply.send({
+          sessionId,
         status: session.status,
         selectedOptionId: session.selectedOptionId,
         humanNotes: session.humanNotes,
@@ -282,6 +322,34 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
       ...payload
     });
 
+    let recoveryWork = null;
+
+    if (payload.nextAction === 'resume_current_chapter' && session.chapterNumber !== null) {
+      recoveryWork = await queueWorkflow({
+        flow: reviewRewriteFlow(),
+        projectId: session.projectId,
+        chapterNumber: session.chapterNumber
+      });
+    } else if (
+      payload.nextAction === 'replan_window'
+      && payload.replanRange
+      && payload.resumeFromChapter !== null
+    ) {
+      const decisionRecoveryRepository = await getDecisionRecoveryRepository();
+      await decisionRecoveryRepository.createRecoveryTask({
+        projectId: session.projectId,
+        sessionId,
+        startChapter: payload.replanRange.startChapter,
+        endChapter: payload.replanRange.endChapter,
+        resumeFromChapter: payload.resumeFromChapter
+      });
+      recoveryWork = await queueWorkflow({
+        flow: chapterReplanFlow(),
+        projectId: session.projectId,
+        chapterNumber: payload.resumeFromChapter
+      });
+    }
+
     return reply.code(200).send({
       sessionId,
       status: session.status,
@@ -289,10 +357,7 @@ export function registerDecisionSessionRoutes(app: FastifyInstance) {
         sessionId,
         ...payload
       },
-      recoveryWork:
-        payload.nextAction === 'replan_window'
-          ? enqueueWorkflow(chapterReplanFlow())
-          : null
+      recoveryWork
     });
   });
 }

@@ -1,6 +1,7 @@
 export * from './create-project-flow';
 export * from './enqueue';
 export * from './chapter-replan-flow';
+export * from './chapter-replan-executors';
 export * from './chapter-executors';
 export * from './chapter-lock';
 export * from './generate-chapter-flow';

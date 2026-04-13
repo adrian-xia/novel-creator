@@ -2,11 +2,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const saveDraftResolutionMock = vi.fn();
 const saveResolutionMock = vi.fn();
+const createRecoveryTaskMock = vi.fn();
+const createRunMock = vi.fn();
 
 vi.mock('../../packages/storage/src/repositories/decision-session-repository', () => ({
   DecisionSessionRepository: class {
     saveDraftResolution = saveDraftResolutionMock;
     saveResolution = saveResolutionMock;
+  }
+}));
+
+vi.mock('../../packages/storage/src/repositories/decision-recovery-repository', () => ({
+  DecisionRecoveryRepository: class {
+    createRecoveryTask = createRecoveryTaskMock;
+  }
+}));
+
+vi.mock('../../packages/storage/src/repositories/workflow-run-repository', () => ({
+  WorkflowRunRepository: class {
+    createRun = createRunMock;
   }
 }));
 
@@ -135,7 +149,13 @@ describe('decision session resolution routes', () => {
   it('accepts a confirmed resolution payload and returns the resolved route shape', async () => {
     saveResolutionMock.mockResolvedValue({
       id: 'session-123',
+      projectId: 'project-1',
+      chapterNumber: 8,
       status: 'resolved'
+    });
+    createRunMock.mockResolvedValue({
+      id: 'workflow-run-review-1',
+      status: 'queued'
     });
 
     const app = await buildTestApp();
@@ -172,7 +192,13 @@ describe('decision session resolution routes', () => {
         resumeFromChapter: null,
         invalidateExistingPlans: false
       },
-      recoveryWork: null
+      recoveryWork: {
+        workflowRunId: 'workflow-run-review-1',
+        flowName: 'review-rewrite-flow',
+        status: 'queued',
+        steps: ['execute-review-rewrite'],
+        autoEnqueued: true
+      }
     });
     expect(saveResolutionMock).toHaveBeenCalledWith({
       sessionId: 'session-123',
@@ -185,6 +211,11 @@ describe('decision session resolution routes', () => {
       replanRange: null,
       resumeFromChapter: null,
       invalidateExistingPlans: false
+    });
+    expect(createRunMock).toHaveBeenCalledWith({
+      flowName: 'review-rewrite-flow',
+      projectId: 'project-1',
+      chapterNumber: 8
     });
     await app.close();
   });
@@ -218,7 +249,22 @@ describe('decision session resolution routes', () => {
   it('accepts a replan resolution when resumeFromChapter is within the replan range', async () => {
     saveResolutionMock.mockResolvedValue({
       id: 'session-123',
+      projectId: 'project-1',
+      chapterNumber: 8,
       status: 'resolved'
+    });
+    createRecoveryTaskMock.mockResolvedValue({
+      id: 'recovery-task-1',
+      projectId: 'project-1',
+      sessionId: 'session-123',
+      startChapter: 8,
+      endChapter: 10,
+      resumeFromChapter: 9,
+      status: 'pending'
+    });
+    createRunMock.mockResolvedValue({
+      id: 'workflow-run-replan-1',
+      status: 'queued'
     });
 
     const app = await buildTestApp();
@@ -262,6 +308,7 @@ describe('decision session resolution routes', () => {
         invalidateExistingPlans: true
       },
       recoveryWork: {
+        workflowRunId: 'workflow-run-replan-1',
         flowName: 'chapter-replan-flow',
         status: 'queued',
         steps: [
@@ -270,7 +317,8 @@ describe('decision session resolution routes', () => {
           'set-chapters-needs-replan',
           'enqueue-replan-window',
           'mark-recovery-task-complete'
-        ]
+        ],
+        autoEnqueued: true
       }
     });
     expect(saveResolutionMock).toHaveBeenCalledWith({
@@ -287,6 +335,18 @@ describe('decision session resolution routes', () => {
       },
       resumeFromChapter: 9,
       invalidateExistingPlans: true
+    });
+    expect(createRecoveryTaskMock).toHaveBeenCalledWith({
+      projectId: 'project-1',
+      sessionId: 'session-123',
+      startChapter: 8,
+      endChapter: 10,
+      resumeFromChapter: 9
+    });
+    expect(createRunMock).toHaveBeenCalledWith({
+      flowName: 'chapter-replan-flow',
+      projectId: 'project-1',
+      chapterNumber: 9
     });
     await app.close();
   });

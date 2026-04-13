@@ -16,6 +16,10 @@ vi.mock('../../packages/storage/src/repositories/decision-session-repository', (
   DecisionSessionRepository: class {}
 }));
 
+vi.mock('../../packages/storage/src/repositories/decision-recovery-repository', () => ({
+  DecisionRecoveryRepository: class {}
+}));
+
 vi.mock('../../packages/storage/src/repositories/prompt-repository', () => ({
   PromptRepository: class {}
 }));
@@ -28,6 +32,10 @@ vi.mock('../../packages/storage/src/repositories/story-state-repository', () => 
   StoryStateRepository: class {
     saveAgentRun = vi.fn();
   }
+}));
+
+vi.mock('../../packages/storage/src/repositories/workflow-run-repository', () => ({
+  WorkflowRunRepository: class {}
 }));
 
 vi.mock('../../packages/storage/src/repositories/provider-capacity-repository', () => ({
@@ -61,6 +69,8 @@ describe('createProductionWorkflowDeps', () => {
     expect(deps.defaultModel).toBe('gpt-5.4');
     expect(deps.agentRunner).toBe(runner);
     expect(deps.decisionSessionRepository).toBeInstanceOf(Object);
+    expect(deps.decisionRecoveryRepository).toBeInstanceOf(Object);
+    expect(deps.workflowRunRepository).toBeInstanceOf(Object);
     expect(typeof capturedDeps?.acquire).toBe('function');
     expect(typeof capturedDeps?.invokeModel).toBe('function');
     expect(typeof capturedDeps?.saveAgentRun).toBe('function');

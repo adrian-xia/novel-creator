@@ -3,6 +3,7 @@ import { decisionSessionFlow, publishChapterFlow } from '../../packages/workflow
 
 const getDecisionQueueMock = vi.fn();
 const confirmHumanGateMock = vi.fn();
+const createRunMock = vi.fn();
 
 vi.mock('../../packages/storage/src/repositories/project-repository', () => ({
   ProjectRepository: class {
@@ -16,6 +17,12 @@ vi.mock('../../packages/storage/src/repositories/decision-session-repository', (
   }
 }));
 
+vi.mock('../../packages/storage/src/repositories/workflow-run-repository', () => ({
+  WorkflowRunRepository: class {
+    createRun = createRunMock;
+  }
+}));
+
 async function buildTestApp() {
   const { buildApp } = await import('../../apps/api/src/app');
   return buildApp();
@@ -25,6 +32,9 @@ describe('phase 3 smoke', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    createRunMock
+      .mockResolvedValueOnce({ id: 'workflow-run-outline-followup', status: 'queued' })
+      .mockResolvedValueOnce({ id: 'workflow-run-volume-followup', status: 'queued' });
   });
 
   it('exposes the decision, publishing, and workflow observability surfaces', async () => {
@@ -97,18 +107,20 @@ describe('phase 3 smoke', () => {
     expect(outlineConfirm.json()).toMatchObject({
       sessionId: 'session-outline-1',
       nextWork: {
+        workflowRunId: 'workflow-run-outline-followup',
         flowName: 'generate-volume-flow',
         status: 'queued',
-        autoEnqueued: false
+        autoEnqueued: true
       }
     });
     expect(volumeConfirm.statusCode).toBe(200);
     expect(volumeConfirm.json()).toMatchObject({
       sessionId: 'session-volume-1',
       nextWork: {
+        workflowRunId: 'workflow-run-volume-followup',
         flowName: 'generate-chapter-flow',
         status: 'queued',
-        autoEnqueued: false
+        autoEnqueued: true
       }
     });
 

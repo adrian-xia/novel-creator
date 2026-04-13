@@ -234,6 +234,48 @@ export class StoryStateRepository {
     });
   }
 
+  async rewindStoryStateToChapter(input: {
+    projectId: string;
+    resumeFromChapter: number;
+  }) {
+    const state = await prisma.storyState.findUnique({
+      where: { projectId: input.projectId }
+    });
+
+    if (!state) {
+      throw new Error(`Story state not found for ${input.projectId}`);
+    }
+
+    const currentPosition =
+      state.currentPosition && typeof state.currentPosition === 'object'
+        ? {
+            ...(state.currentPosition as Record<string, unknown>),
+            nextChapterNumber: input.resumeFromChapter
+          }
+        : {
+            nextChapterNumber: input.resumeFromChapter,
+            currentVolumeNumber: null
+          };
+
+    const chapterSummaries = Array.isArray(state.chapterSummaries)
+      ? state.chapterSummaries.filter((item) => {
+          if (!item || typeof item !== 'object' || !('chapterNumber' in item)) {
+            return false;
+          }
+
+          return Number((item as { chapterNumber: number }).chapterNumber) < input.resumeFromChapter;
+        })
+      : [];
+
+    return prisma.storyState.update({
+      where: { projectId: input.projectId },
+      data: {
+        chapterSummaries,
+        currentPosition
+      }
+    });
+  }
+
   async saveReviewOutcome(outcome: ReviewOutcome) {
     return prisma.reviewOutcomeRecord.create({
       data: {

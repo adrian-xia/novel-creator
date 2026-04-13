@@ -1,5 +1,6 @@
 import type { WorkflowTriggerPayload } from './create-project-flow';
 import { executeGenerateChapter } from './chapter-executors';
+import { executeReviewRewrite } from './review-rewrite-executors';
 import type { ExecutableWorkflow } from './workflow-runtime';
 
 export interface ChapterFlowContext {
@@ -14,6 +15,9 @@ export function generateChapterFlow(): ExecutableWorkflow<
   return {
     name: 'generate-chapter-flow',
     buildInitialContext: (payload) => payload,
-    steps: [{ name: 'execute-chapter-generation', run: async (context, deps) => executeGenerateChapter(context, deps) }]
+    steps: [
+      { name: 'execute-chapter-generation', run: async (context, deps) => executeGenerateChapter(context, deps) },
+      { name: 'execute-review-rewrite', run: async (context, deps) => executeReviewRewrite(context, deps) }
+    ]
   };
 }

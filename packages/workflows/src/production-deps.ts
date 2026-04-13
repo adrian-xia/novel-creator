@@ -3,11 +3,13 @@ import { createAgentRunner } from '../../agent-runtime/src/agent-runner';
 import { renderPrompt as renderPromptTemplate } from '../../agent-runtime/src/prompt-renderer';
 import { CapacityService, type CapacityKey } from '../../llm-gateway/src/capacity-service';
 import { invokeOpenAICompatibleModel } from '../../llm-gateway/src/openai-compatible-client';
+import { DecisionRecoveryRepository } from '../../storage/src/repositories/decision-recovery-repository';
 import { DecisionSessionRepository } from '../../storage/src/repositories/decision-session-repository';
 import { ProviderCapacityRepository } from '../../storage/src/repositories/provider-capacity-repository';
 import { PromptRepository } from '../../storage/src/repositories/prompt-repository';
 import { ProjectRepository } from '../../storage/src/repositories/project-repository';
 import { StoryStateRepository } from '../../storage/src/repositories/story-state-repository';
+import { WorkflowRunRepository } from '../../storage/src/repositories/workflow-run-repository';
 import type { WorkflowDeps } from './workflow-deps';
 
 const DEFAULT_PROVIDER = 'openai';
@@ -74,6 +76,8 @@ export function createProductionWorkflowDeps(): WorkflowDeps {
     projectRepository: new ProjectRepository(),
     storyStateRepository: new StoryStateRepository(),
     decisionSessionRepository: new DecisionSessionRepository(),
+    decisionRecoveryRepository: new DecisionRecoveryRepository(),
+    workflowRunRepository: new WorkflowRunRepository(),
     defaultProvider: DEFAULT_PROVIDER,
     defaultModel: DEFAULT_MODEL,
     agentRunner: (() => {

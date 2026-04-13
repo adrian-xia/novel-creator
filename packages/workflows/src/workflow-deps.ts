@@ -1,7 +1,9 @@
+import type { DecisionRecoveryRepository } from '../../storage/src/repositories/decision-recovery-repository';
 import type { DecisionSessionRepository } from '../../storage/src/repositories/decision-session-repository';
 import type { PromptRepository } from '../../storage/src/repositories/prompt-repository';
 import type { ProjectRepository } from '../../storage/src/repositories/project-repository';
 import type { StoryStateRepository } from '../../storage/src/repositories/story-state-repository';
+import type { WorkflowRunRepository } from '../../storage/src/repositories/workflow-run-repository';
 
 export interface WorkflowAgentRunner {
   run(input: {
@@ -28,6 +30,8 @@ export type WorkflowDeps = {
   projectRepository: ProjectRepository;
   storyStateRepository: StoryStateRepository;
   decisionSessionRepository: DecisionSessionRepository;
+  decisionRecoveryRepository: DecisionRecoveryRepository;
+  workflowRunRepository: WorkflowRunRepository;
   agentRunner: WorkflowAgentRunner;
   defaultProvider: string;
   defaultModel: string;

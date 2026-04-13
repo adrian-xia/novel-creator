@@ -118,6 +118,13 @@ type HumanGateConfirmationResponse = {
   status: string;
   selectedOptionId: string | null;
   humanNotes: string | null;
+  nextWork?: {
+    workflowRunId: string;
+    flowName: string;
+    status: string;
+    steps: string[];
+    autoEnqueued: boolean;
+  };
 };
 
 type HumanGateCancellationResponse = {
@@ -139,7 +146,15 @@ type DecisionResolutionResponse = {
   sessionId: string;
   status: string;
   resolution: Record<string, unknown>;
-  recoveryWork: Record<string, unknown> | null;
+  recoveryWork:
+    | {
+        workflowRunId: string;
+        flowName: string;
+        status: string;
+        steps: string[];
+        autoEnqueued: boolean;
+      }
+    | null;
 };
 
 type PublishTask = {

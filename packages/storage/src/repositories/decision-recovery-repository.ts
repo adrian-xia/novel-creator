@@ -30,4 +30,32 @@ export class DecisionRecoveryRepository {
       });
     });
   }
+
+  async findLatestPendingTask(projectId: string) {
+    return prisma.chapterRecoveryTaskRecord.findFirst({
+      where: {
+        projectId,
+        status: 'pending'
+      },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }]
+    });
+  }
+
+  async markTaskRunning(taskId: string) {
+    return prisma.chapterRecoveryTaskRecord.update({
+      where: { id: taskId },
+      data: {
+        status: 'running'
+      }
+    });
+  }
+
+  async markTaskCompleted(taskId: string) {
+    return prisma.chapterRecoveryTaskRecord.update({
+      where: { id: taskId },
+      data: {
+        status: 'completed'
+      }
+    });
+  }
 }

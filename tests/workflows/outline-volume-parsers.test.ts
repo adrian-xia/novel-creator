@@ -27,6 +27,34 @@ describe('outline and volume parsers', () => {
     );
   });
 
+  it('serializes structured story bible payloads instead of dropping them', () => {
+    expect(
+      parseOutlineOutput({
+        title: '卷一',
+        storyBible: {
+          factions: ['天剑宗', '药王谷'],
+          protagonist: {
+            name: '林弃'
+          }
+        }
+      })
+    ).toEqual({
+      outline: {
+        title: '卷一'
+      },
+      storyBible: JSON.stringify(
+        {
+          factions: ['天剑宗', '药王谷'],
+          protagonist: {
+            name: '林弃'
+          }
+        },
+        null,
+        2
+      )
+    });
+  });
+
   it('normalizes volume numbers while preserving the validated plan payloads', () => {
     expect(
       parseVolumeOutput({

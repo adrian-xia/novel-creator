@@ -17,6 +17,28 @@ export default async function ProjectDetailPage({
     <main>
       <h1>Story Production</h1>
       <section>
+        <h2>Production Status</h2>
+        <p>Phase: {detail.productionStatus.phase}</p>
+        <p>Recommended Action: {detail.continueRecommendation.action}</p>
+        <p>{detail.continueRecommendation.reason}</p>
+        <p>Next Chapter: {detail.productionStatus.nextChapterNumber ?? 'Not ready'}</p>
+        {detail.productionStatus.openSessionId ? (
+          <p>
+            Open Session:{' '}
+            <a href={`/decision-sessions/${detail.productionStatus.openSessionId}`}>
+              {detail.productionStatus.openSessionId}
+            </a>
+          </p>
+        ) : null}
+        {detail.productionStatus.canContinue ? (
+          <form action={`/projects/${projectId}/continue`} method="post">
+            <button type="submit">Continue Project</button>
+          </form>
+        ) : (
+          <p>Continue is currently blocked.</p>
+        )}
+      </section>
+      <section>
         <h2>Outline</h2>
         <pre>{JSON.stringify(detail.outline, null, 2)}</pre>
       </section>

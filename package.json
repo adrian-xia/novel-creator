@@ -6,6 +6,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
+    "prompts:seed": "pnpm --filter @novel-creator/storage exec prisma db execute --schema prisma/schema.prisma --file sql/seed_default_prompts.sql",
     "test": "vitest run"
   },
   "devDependencies": {

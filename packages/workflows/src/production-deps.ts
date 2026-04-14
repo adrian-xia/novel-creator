@@ -12,14 +12,57 @@ import { StoryStateRepository } from '../../storage/src/repositories/story-state
 import { WorkflowRunRepository } from '../../storage/src/repositories/workflow-run-repository';
 import type { WorkflowDeps } from './workflow-deps';
 
-const DEFAULT_PROVIDER = 'openai';
-const DEFAULT_MODEL = 'gpt-5.4';
+function getDefaultProvider(): string {
+  return process.env.WORKFLOW_DEFAULT_PROVIDER?.trim() || 'openai';
+}
+
+function getDefaultModel(): string {
+  return process.env.WORKFLOW_DEFAULT_MODEL?.trim() || 'gpt-5.4';
+}
 
 function toCapacityKeys(records: Awaited<ReturnType<ProviderCapacityRepository['findEnabledByProviderModel']>>): CapacityKey[] {
   return records.map((record) => ({
     ...record,
     currentLeases: 0
   }));
+}
+
+function normalizeEnvPrefix(provider: string): string {
+  return provider.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase();
+}
+
+function readEnvBackedCapacity(provider: string, model: string): CapacityKey | null {
+  const prefix = normalizeEnvPrefix(provider);
+  const apiKeyEnv = `${prefix}_API_KEY`;
+  const baseUrlEnv = `${prefix}_BASE_URL`;
+  const protocolModeEnv = `${prefix}_PROTOCOL_MODE`;
+  const apiKey = process.env[apiKeyEnv]?.trim();
+  const baseUrl = process.env[baseUrlEnv]?.trim();
+  const protocolMode = process.env[protocolModeEnv]?.trim();
+
+  if (!apiKey || !baseUrl) {
+    return null;
+  }
+
+  return {
+    id: `env-${provider}-${model}`,
+    provider,
+    model,
+    keyName: 'env-default',
+    baseUrl,
+    apiKeySecretRef: `env://${apiKeyEnv}`,
+    protocolMode:
+      protocolMode === 'responses' || protocolMode === 'chat_completions' || protocolMode === 'auto'
+        ? protocolMode
+        : 'auto',
+    maxConcurrentRequests: 1,
+    requestsPerMinute: 60,
+    tokensPerMinute: 120000,
+    dailyBudget: '0.00',
+    enabled: true,
+    priority: 0,
+    currentLeases: 0
+  };
 }
 
 function resolveSecretEnvName(secretRef: string): string {
@@ -71,6 +114,9 @@ function renderPrompt(input: Record<string, unknown>): string {
 
 export function createProductionWorkflowDeps(): WorkflowDeps {
   const providerCapacityRepository = new ProviderCapacityRepository();
+  const defaultProvider = getDefaultProvider();
+  const defaultModel = getDefaultModel();
+
   return {
     promptRepository: new PromptRepository(),
     projectRepository: new ProjectRepository(),
@@ -78,8 +124,8 @@ export function createProductionWorkflowDeps(): WorkflowDeps {
     decisionSessionRepository: new DecisionSessionRepository(),
     decisionRecoveryRepository: new DecisionRecoveryRepository(),
     workflowRunRepository: new WorkflowRunRepository(),
-    defaultProvider: DEFAULT_PROVIDER,
-    defaultModel: DEFAULT_MODEL,
+    defaultProvider,
+    defaultModel,
     agentRunner: (() => {
       const storyStateRepository = new StoryStateRepository();
       const capacityServices = new Map<string, Promise<CapacityService>>();
@@ -95,7 +141,12 @@ export function createProductionWorkflowDeps(): WorkflowDeps {
 
         const next = providerCapacityRepository
           .findEnabledByProviderModel(provider, model)
-          .then((records) => new CapacityService(toCapacityKeys(records)));
+          .then((records) => {
+            const keys = toCapacityKeys(records);
+            const envCapacity = readEnvBackedCapacity(provider, model);
+
+            return new CapacityService(envCapacity ? [...keys, envCapacity] : keys);
+          });
         capacityServices.set(cacheKey, next);
         return next;
       };

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildApp } from '../../apps/api/src/app';
 
 const createRunMock = vi.hoisted(() => vi.fn());
+const continueProjectMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../packages/storage/src/repositories/workflow-run-repository', () => ({
   WorkflowRunRepository: class {
@@ -14,6 +16,7 @@ vi.mock('../../packages/workflows/src', () => ({
     status: 'queued',
     steps: flow.steps
   })),
+  continueProject: continueProjectMock,
   generateOutlineFlow: () => ({
     name: 'generate-outline-flow',
     steps: [
@@ -111,6 +114,43 @@ describe('story production routes', () => {
       status: 'queued',
       steps
     });
+
+    await app.close();
+  });
+
+  it('routes unified project continuation through the shared continue strategy', async () => {
+    continueProjectMock.mockResolvedValue({
+      projectId: 'project-1',
+      continued: true,
+      action: 'generate_next_chapter',
+      reason: 'Project is ready to generate the next chapter.',
+      workflowRunId: 'workflow-run-9',
+      flowName: 'generate-chapter-flow',
+      status: 'queued',
+      steps: ['execute-chapter-generation', 'execute-review-rewrite'],
+      autoContinuedChapters: 0
+    });
+
+    const app = await buildTestApp();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/projects/project-1/continue'
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      projectId: 'project-1',
+      continued: true,
+      action: 'generate_next_chapter',
+      reason: 'Project is ready to generate the next chapter.',
+      workflowRunId: 'workflow-run-9',
+      flowName: 'generate-chapter-flow',
+      status: 'queued',
+      steps: ['execute-chapter-generation', 'execute-review-rewrite'],
+      autoContinuedChapters: 0
+    });
+    expect(continueProjectMock).toHaveBeenCalledWith('project-1');
 
     await app.close();
   });

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import {
+  continueProject,
   enqueueWorkflow,
   generateChapterFlow,
   generateOutlineFlow,
@@ -64,5 +65,12 @@ export function registerStoryProductionRoutes(app: FastifyInstance) {
       workflowRunId: workflowRun.id,
       ...enqueueWorkflow(flow)
     });
+  });
+
+  app.post('/projects/:projectId/continue', async (request, reply) => {
+    const { projectId } = request.params as { projectId: string };
+    const result = await continueProject(projectId);
+
+    return reply.code(200).send(result);
   });
 }

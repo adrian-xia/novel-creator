@@ -12,7 +12,18 @@ const productionDeps = {
   promptRepository: { name: 'prompt-repository' },
   projectRepository: { name: 'project-repository' },
   storyStateRepository: { name: 'story-state-repository' },
-  decisionSessionRepository: { name: 'decision-session-repository' },
+  decisionSessionRepository: {
+    name: 'decision-session-repository',
+    listSessions: vi.fn()
+  },
+  decisionRecoveryRepository: {
+    name: 'decision-recovery-repository',
+    findLatestPendingTask: vi.fn()
+  },
+  workflowRunRepository: {
+    name: 'workflow-run-repository',
+    findLatestActiveRun: vi.fn()
+  },
   agentRunner: { run: vi.fn() },
   defaultProvider: 'openai',
   defaultModel: 'gpt-5.4'
@@ -45,6 +56,12 @@ describe('runWorkflowJob', () => {
     runInstrumentedWorkflow.mockReset();
     createProductionWorkflowDeps.mockReset();
     createProductionWorkflowDeps.mockReturnValue(productionDeps);
+    productionDeps.decisionSessionRepository.listSessions.mockReset();
+    productionDeps.decisionRecoveryRepository.findLatestPendingTask.mockReset();
+    productionDeps.workflowRunRepository.findLatestActiveRun.mockReset();
+    productionDeps.decisionSessionRepository.listSessions.mockResolvedValue([]);
+    productionDeps.decisionRecoveryRepository.findLatestPendingTask.mockResolvedValue(null);
+    productionDeps.workflowRunRepository.findLatestActiveRun.mockResolvedValue(null);
   });
 
   const expectWorkflowDeps = (deps: unknown) => {
@@ -172,6 +189,62 @@ describe('runWorkflowJob', () => {
       })
     );
     expect(createProductionWorkflowDeps).toHaveBeenCalledTimes(1);
+  });
+
+  it('auto-continues one additional chapter after an approved chapter flow when budget is available', async () => {
+    runInstrumentedWorkflow
+      .mockResolvedValueOnce({
+        projectId: 'project-1',
+        chapterNumber: 8,
+        reviewDecision: 'approve'
+      })
+      .mockResolvedValueOnce({
+        projectId: 'project-1',
+        chapterNumber: 9,
+        reviewDecision: 'approve'
+      });
+
+    await expect(
+      runWorkflowJob('generate-chapter-flow', {
+        projectId: 'project-1',
+        autoContinueBudget: 1
+      })
+    ).resolves.toEqual({
+      projectId: 'project-1',
+      chapterNumber: 8,
+      reviewDecision: 'approve',
+      autoContinuedChapters: 1
+    });
+
+    expect(runInstrumentedWorkflow).toHaveBeenCalledTimes(2);
+    expect(runInstrumentedWorkflow.mock.calls[0]?.[0]?.flow.name).toBe('generate-chapter-flow');
+    expect(runInstrumentedWorkflow.mock.calls[1]?.[0]?.flow.name).toBe('generate-chapter-flow');
+    expect(runInstrumentedWorkflow.mock.calls[1]?.[0]?.payload).toEqual({
+      projectId: 'project-1',
+      chapterNumber: null
+    });
+  });
+
+  it('does not auto-continue when the chapter flow does not finish approved', async () => {
+    runInstrumentedWorkflow.mockResolvedValue({
+      projectId: 'project-1',
+      chapterNumber: 8,
+      reviewDecision: 'blocked_for_manual_decision'
+    });
+
+    await expect(
+      runWorkflowJob('generate-chapter-flow', {
+        projectId: 'project-1',
+        autoContinueBudget: 1
+      })
+    ).resolves.toEqual({
+      projectId: 'project-1',
+      chapterNumber: 8,
+      reviewDecision: 'blocked_for_manual_decision',
+      autoContinuedChapters: 0
+    });
+
+    expect(runInstrumentedWorkflow).toHaveBeenCalledTimes(1);
   });
 
   it('rejects unknown workflows instead of running an empty flow', async () => {

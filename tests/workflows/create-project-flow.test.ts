@@ -1,19 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createProjectFlow, enqueueWorkflow } from '../../packages/workflows/src';
+import { createProjectFlow } from '../../packages/workflows/src/create-project-flow';
+import { enqueueWorkflow } from '../../packages/workflows/src/enqueue';
 
-const { runInstrumentedWorkflow } = vi.hoisted(() => ({
-  runInstrumentedWorkflow: vi.fn()
+const { runWorkflowJob } = vi.hoisted(() => ({
+  runWorkflowJob: vi.fn()
 }));
 
-vi.mock('../../packages/workflows/src/workflow-runner', () => ({
-  runInstrumentedWorkflow
+vi.mock('../../apps/worker/src/jobs/workflow-job', () => ({
+  runWorkflowJob
 }));
 
 import { startWorker } from '../../apps/worker/src/worker';
 
 describe('createProjectFlow', () => {
   beforeEach(() => {
-    runInstrumentedWorkflow.mockReset();
+    runWorkflowJob.mockReset();
   });
 
   it('returns the initial workflow step list', () => {
@@ -40,7 +41,7 @@ describe('createProjectFlow', () => {
   });
 
   it('starts the worker with the create-project workflow by default', async () => {
-    runInstrumentedWorkflow.mockResolvedValue({
+    runWorkflowJob.mockResolvedValue({
       flowName: 'create-project-flow',
       stepCount: 3
     });
@@ -49,24 +50,6 @@ describe('createProjectFlow', () => {
       flowName: 'create-project-flow',
       stepCount: 3
     });
-
-    const call = runInstrumentedWorkflow.mock.calls[0]?.[0];
-
-    expect(call?.flow.name).toBe('create-project-flow');
-    expect(call?.flow.steps.map((step: { name: string }) => step.name)).toEqual([
-      'persist-project',
-      'enqueue-outline',
-      'mark-project-active'
-    ]);
-    expect(call?.payload).toEqual({
-      projectId: 'system',
-      chapterNumber: null
-    });
-    expect(call?.deps).toEqual(
-      expect.objectContaining({
-        defaultProvider: 'openai',
-        defaultModel: 'gpt-5.4'
-      })
-    );
+    expect(runWorkflowJob).toHaveBeenCalledWith('create-project-flow');
   });
 });

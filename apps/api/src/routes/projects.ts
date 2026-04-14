@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { buildProductionStatus } from '../../../../packages/workflows/src/project-continue';
 import { createNovelProject } from '../../../../packages/domain/src';
 
 function toIsoString(value: Date | string | null | undefined) {
@@ -17,6 +18,22 @@ async function getProjectRepository() {
   return new ProjectRepository();
 }
 
+async function getWorkflowRunRepository() {
+  const { WorkflowRunRepository } = await import(
+    '../../../../packages/storage/src/repositories/workflow-run-repository'
+  );
+
+  return new WorkflowRunRepository();
+}
+
+async function getDecisionRecoveryRepository() {
+  const { DecisionRecoveryRepository } = await import(
+    '../../../../packages/storage/src/repositories/decision-recovery-repository'
+  );
+
+  return new DecisionRecoveryRepository();
+}
+
 export function registerProjectRoutes(app: FastifyInstance) {
   app.post('/projects', async (request, reply) => {
     const repository = await getProjectRepository();
@@ -29,6 +46,8 @@ export function registerProjectRoutes(app: FastifyInstance) {
   app.get('/projects/:projectId', async (request, reply) => {
     const { projectId } = request.params as { projectId: string };
     const repository = await getProjectRepository();
+    const workflowRunRepository = await getWorkflowRunRepository();
+    const decisionRecoveryRepository = await getDecisionRecoveryRepository();
     const detail = await repository.getProjectDecisionAndPublishingDetail(projectId);
 
     if (!detail) {
@@ -46,6 +65,12 @@ export function registerProjectRoutes(app: FastifyInstance) {
         latestReviewDecisionByChapter.set(reviewOutcome.chapterNumber, payload.decision);
       }
     }
+
+    const productionStatus = buildProductionStatus({
+      detail,
+      activeWorkflowRun: await workflowRunRepository.findLatestActiveRun(projectId),
+      pendingRecoveryTask: await decisionRecoveryRepository.findLatestPendingTask(projectId)
+    });
 
     return {
       projectId: detail.id,
@@ -74,7 +99,13 @@ export function registerProjectRoutes(app: FastifyInstance) {
             manualExportTargets: [],
             defaultExportFormat: 'markdown',
             effectiveFromChapter: null
-          }
+          },
+      productionStatus,
+      continueRecommendation: {
+        canContinue: productionStatus.canContinue,
+        action: productionStatus.recommendedAction,
+        reason: productionStatus.reason
+      }
     };
   });
 }

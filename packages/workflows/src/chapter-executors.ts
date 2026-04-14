@@ -2,6 +2,7 @@ import type { PromptRepository } from '../../storage/src/repositories/prompt-rep
 import type { StoryStateRepository } from '../../storage/src/repositories/story-state-repository';
 import { acquireChapterPipelineLock, releaseChapterPipelineLock } from './chapter-lock';
 import type { ChapterFlowContext } from './generate-chapter-flow';
+import { parseStructuredJsonOutput } from './structured-output';
 import type { WorkflowAgentRunner } from './workflow-deps';
 
 interface ChapterWorkflowDeps {
@@ -85,21 +86,7 @@ function normalizeStructuredAgentOutput(result: {
     return result.parsedOutput;
   }
 
-  if (result.rawOutput.trim().length === 0) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(result.rawOutput) as unknown;
-
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
+  return parseStructuredJsonOutput(result.rawOutput);
 }
 
 function requirePrompt(prompt: PromptInput | null, agentName: string) {

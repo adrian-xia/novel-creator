@@ -6,6 +6,22 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function normalizeStoryBible(value: unknown): string | null {
+  if (isNonEmptyString(value)) {
+    return value;
+  }
+
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value, null, 2);
+  }
+
+  return null;
+}
+
 export function parseOutlineOutput(output: Record<string, unknown> | null) {
   if (!output || !isNonEmptyString(output.title)) {
     throw new Error('Invalid outline output: missing title');
@@ -15,7 +31,7 @@ export function parseOutlineOutput(output: Record<string, unknown> | null) {
 
   return {
     outline,
-    storyBible: isNonEmptyString(storyBible) ? storyBible : null
+    storyBible: normalizeStoryBible(storyBible)
   };
 }
 

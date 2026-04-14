@@ -185,6 +185,35 @@ type ExportableChapter = {
 };
 
 type ExportPreview = Record<string, unknown>;
+type PromptConfigRecord = {
+  id: string;
+  agentName: string;
+  version: number;
+  systemPrompt: string;
+  taskTemplate: string;
+  outputSchema: Record<string, unknown>;
+  reviewRubric?: string | null;
+  enabled: boolean;
+  lastTestedModel?: string | null;
+};
+type ProductionPhase =
+  | 'needs_outline'
+  | 'waiting_outline_confirmation'
+  | 'needs_volume'
+  | 'waiting_volume_confirmation'
+  | 'needs_chapter_generation'
+  | 'blocked_for_decision'
+  | 'needs_replan_recovery'
+  | 'running_workflow'
+  | 'paused';
+type ContinueAction =
+  | 'generate_outline'
+  | 'generate_volume'
+  | 'generate_next_chapter'
+  | 'run_replan_recovery'
+  | 'open_human_gate'
+  | 'wait_for_running_workflow'
+  | 'none';
 
 export async function getProjectProductionDetail(projectId: string) {
   return getJson<{
@@ -204,7 +233,29 @@ export async function getProjectProductionDetail(projectId: string) {
       defaultExportFormat: ExportFormat;
       effectiveFromChapter: number | null;
     };
+    productionStatus: {
+      phase: ProductionPhase;
+      canContinue: boolean;
+      recommendedAction: ContinueAction;
+      reason: string;
+      activeWorkflowRunId: string | null;
+      openSessionId: string | null;
+      pendingRecoveryTaskId: string | null;
+      nextChapterNumber: number | null;
+      autoContinueBudget: number;
+    };
+    continueRecommendation: {
+      canContinue: boolean;
+      action: ContinueAction;
+      reason: string;
+    };
   }>(`${API_BASE_URL}/projects/${projectId}`);
+}
+
+export async function listPromptConfigs() {
+  return getJson<{
+    items: PromptConfigRecord[];
+  }>(`${API_BASE_URL}/prompts`);
 }
 
 export async function getDecisionQueue() {

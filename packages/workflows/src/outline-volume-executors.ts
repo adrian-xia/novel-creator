@@ -7,6 +7,7 @@ import type { OutlineFlowContext } from './generate-outline-flow';
 import type { VolumeFlowContext } from './generate-volume-flow';
 import { requestHumanGate } from './human-gate';
 import { parseOutlineOutput, parseVolumeOutput } from './outline-volume-parsers';
+import { parseStructuredJsonOutput } from './structured-output';
 import type { WorkflowAgentRunner } from './workflow-deps';
 
 export interface OutlineVolumeWorkflowDeps {
@@ -90,21 +91,7 @@ function normalizeStructuredAgentOutput(result: {
     return result.parsedOutput;
   }
 
-  if (result.rawOutput.trim().length === 0) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(result.rawOutput) as unknown;
-
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
+  return parseStructuredJsonOutput(result.rawOutput);
 }
 
 function requireRuntimeConfig(deps: OutlineVolumeWorkflowDeps) {

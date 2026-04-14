@@ -2,11 +2,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createProjectRecordMock = vi.fn();
 const getProjectDecisionAndPublishingDetailMock = vi.fn();
+const findLatestActiveRunMock = vi.fn();
+const findLatestPendingTaskMock = vi.fn();
 
 vi.mock('../../packages/storage/src/repositories/project-repository', () => ({
   ProjectRepository: class {
     create = createProjectRecordMock;
     getProjectDecisionAndPublishingDetail = getProjectDecisionAndPublishingDetailMock;
+  }
+}));
+
+vi.mock('../../packages/storage/src/repositories/workflow-run-repository', () => ({
+  WorkflowRunRepository: class {
+    findLatestActiveRun = findLatestActiveRunMock;
+  }
+}));
+
+vi.mock('../../packages/storage/src/repositories/decision-recovery-repository', () => ({
+  DecisionRecoveryRepository: class {
+    findLatestPendingTask = findLatestPendingTaskMock;
   }
 }));
 
@@ -19,6 +33,8 @@ describe('projects route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    findLatestActiveRunMock.mockResolvedValue(null);
+    findLatestPendingTaskMock.mockResolvedValue(null);
   });
 
   it('creates a project', async () => {
@@ -78,7 +94,11 @@ describe('projects route', () => {
       id: 'project-1',
       storyState: {
         outline: { title: '总纲' },
-        volumePlans: [{ volumeNumber: 1, title: '第一卷' }]
+        volumePlans: [{ volumeNumber: 1, title: '第一卷' }],
+        currentPosition: {
+          nextChapterNumber: 9,
+          currentVolumeNumber: 1
+        }
       },
       chapterStateRecords: [
         {
@@ -111,7 +131,15 @@ describe('projects route', () => {
         manualExportTargets: ['beta'],
         defaultExportFormat: 'bundle',
         effectiveFromChapter: 3
-      }
+      },
+      decisionSessions: [
+        {
+          id: 'session-volume',
+          gateType: 'volume_confirmation',
+          status: 'resolved',
+          selectedOptionId: 'accept-volume-plans'
+        }
+      ]
     });
 
     const app = await buildTestApp();
@@ -147,9 +175,27 @@ describe('projects route', () => {
         manualExportTargets: ['beta'],
         defaultExportFormat: 'bundle',
         effectiveFromChapter: 3
+      },
+      productionStatus: {
+        phase: 'needs_chapter_generation',
+        canContinue: true,
+        recommendedAction: 'generate_next_chapter',
+        reason: 'Project is ready to generate the next chapter.',
+        activeWorkflowRunId: null,
+        openSessionId: null,
+        pendingRecoveryTaskId: null,
+        nextChapterNumber: 9,
+        autoContinueBudget: 1
+      },
+      continueRecommendation: {
+        canContinue: true,
+        action: 'generate_next_chapter',
+        reason: 'Project is ready to generate the next chapter.'
       }
     });
     expect(getProjectDecisionAndPublishingDetailMock).toHaveBeenCalledWith('project-1');
+    expect(findLatestActiveRunMock).toHaveBeenCalledWith('project-1');
+    expect(findLatestPendingTaskMock).toHaveBeenCalledWith('project-1');
 
     await app.close();
   });

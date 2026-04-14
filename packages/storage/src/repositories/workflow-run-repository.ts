@@ -13,6 +13,18 @@ export class WorkflowRunRepository {
     });
   }
 
+  async findLatestActiveRun(projectId: string) {
+    return prisma.workflowRunRecord.findFirst({
+      where: {
+        projectId,
+        status: {
+          in: ['queued', 'running']
+        }
+      },
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }]
+    });
+  }
+
   async createRun(input: CreateRunInput) {
     return prisma.workflowRunRecord.create({
       data: {

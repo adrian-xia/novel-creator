@@ -50,6 +50,10 @@ describe('createProductionWorkflowDeps', () => {
     invokeOpenAICompatibleModel.mockReset();
     findEnabledByProviderModel.mockReset();
     delete process.env.OPENAI_PRIMARY;
+    delete process.env.OPENAI_BASE_URL;
+    delete process.env.OPENAI_PROTOCOL_MODE;
+    delete process.env.WORKFLOW_DEFAULT_PROVIDER;
+    delete process.env.WORKFLOW_DEFAULT_MODEL;
   });
 
   it('builds production deps with an agent runner and default outline-volume model settings', async () => {
@@ -146,6 +150,49 @@ describe('createProductionWorkflowDeps', () => {
       baseUrl: 'https://api.openai.com/v1',
       apiKey: 'secret-key',
       protocolMode: 'responses'
+    });
+  });
+
+  it('allows overriding default provider and model via environment variables', async () => {
+    createAgentRunner.mockReturnValue({ run: vi.fn() });
+    process.env.WORKFLOW_DEFAULT_PROVIDER = 'openai';
+    process.env.WORKFLOW_DEFAULT_MODEL = 'deepseek-r1';
+
+    const { createProductionWorkflowDeps } = await import(
+      '../../packages/workflows/src/production-deps'
+    );
+    const deps = createProductionWorkflowDeps();
+
+    expect(deps.defaultProvider).toBe('openai');
+    expect(deps.defaultModel).toBe('deepseek-r1');
+  });
+
+  it('falls back to env-backed capacity when no provider-capacity record exists', async () => {
+    let capturedDeps: Record<string, unknown> | undefined;
+    createAgentRunner.mockImplementation((deps) => {
+      capturedDeps = deps as Record<string, unknown>;
+      return { run: vi.fn() };
+    });
+    findEnabledByProviderModel.mockResolvedValue([]);
+    process.env.OPENAI_API_KEY = 'env-openai-key';
+    process.env.OPENAI_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+    process.env.OPENAI_PROTOCOL_MODE = 'chat_completions';
+
+    const { createProductionWorkflowDeps } = await import(
+      '../../packages/workflows/src/production-deps'
+    );
+    createProductionWorkflowDeps();
+
+    const acquire = capturedDeps?.acquire as (input: {
+      provider: string;
+      model: string;
+    }) => Promise<Record<string, unknown>>;
+
+    await expect(acquire({ provider: 'openai', model: 'deepseek-r1' })).resolves.toMatchObject({
+      keyId: 'env-openai-deepseek-r1',
+      baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      apiKeySecretRef: 'env://OPENAI_API_KEY',
+      protocolMode: 'chat_completions'
     });
   });
 });

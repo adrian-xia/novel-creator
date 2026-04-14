@@ -31,6 +31,22 @@ describe('ProjectDetailPage', () => {
             manualExportTargets: ['beta'],
             defaultExportFormat: 'bundle',
             effectiveFromChapter: 3
+          },
+          productionStatus: {
+            phase: 'needs_chapter_generation',
+            canContinue: true,
+            recommendedAction: 'generate_next_chapter',
+            reason: 'Project is ready to generate the next chapter.',
+            activeWorkflowRunId: null,
+            openSessionId: null,
+            pendingRecoveryTaskId: null,
+            nextChapterNumber: 9,
+            autoContinueBudget: 1
+          },
+          continueRecommendation: {
+            canContinue: true,
+            action: 'generate_next_chapter',
+            reason: 'Project is ready to generate the next chapter.'
           }
         })
       })
@@ -65,6 +81,12 @@ describe('ProjectDetailPage', () => {
     const html = renderToString(Page);
 
     expect(html).toContain('Story Production');
+    expect(html).toContain('Production Status');
+    expect(html).toContain('needs_chapter_generation');
+    expect(html).toContain('generate_next_chapter');
+    expect(html).toContain('Project is ready to generate the next chapter.');
+    expect(html).toContain('Continue Project');
+    expect(html).toContain('/projects/project-1/continue');
     expect(html).toContain('Outline');
     expect(html).toContain('Volumes');
     expect(html).toContain('Chapters');

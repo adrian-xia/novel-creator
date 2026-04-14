@@ -5,7 +5,21 @@
 1. `corepack pnpm install`
 2. `docker compose up -d postgres redis`
 3. `corepack pnpm --filter @novel-creator/storage prisma migrate dev`
-4. `corepack pnpm dev`
+4. `corepack pnpm prompts:seed`
+5. `corepack pnpm dev`
+
+Optional runtime overrides:
+
+- `WORKFLOW_DEFAULT_PROVIDER` selects which provider name the production worker requests by default
+- `WORKFLOW_DEFAULT_MODEL` selects which model the production worker requests by default
+- `OPENAI_BASE_URL` and `OPENAI_PROTOCOL_MODE` can provide an `.env` fallback for OpenAI-compatible runtimes when no matching provider-capacity row exists yet
+- provider-capacity records still take precedence when present and remain the durable multi-key configuration path
+
+Prompt bootstrap:
+
+- `pnpm prompts:seed` applies the initial six-agent prompt catalog directly to PostgreSQL
+- `POST /prompts/bootstrap` provides the same bootstrap flow through the API
+- `/prompts` in the web app now lists persisted prompt configs and exposes a bootstrap button
 
 ## Core Production Chain
 

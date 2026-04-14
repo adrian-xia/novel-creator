@@ -14,5 +14,7 @@ export * from './review-rewrite-flow';
 export * from './review-rewrite-executors';
 export * from './outline-volume-executors';
 export * from './outline-volume-parsers';
+export * from './project-continue';
+export * from './structured-output';
 export * from './workflow-deps';
 export * from './workflow-runtime';

@@ -4,6 +4,7 @@ import type { DecisionSessionRepository } from '../../storage/src/repositories/d
 import type { StoryStateRepository } from '../../storage/src/repositories/story-state-repository';
 import { decideReviewNextState } from './review-policy';
 import type { ReviewRewriteFlowContext } from './review-rewrite-flow';
+import { parseStructuredJsonOutput } from './structured-output';
 import type { WorkflowAgentRunner } from './workflow-deps';
 
 interface ReviewRewriteWorkflowDeps {
@@ -74,21 +75,7 @@ function normalizeStructuredAgentOutput(result: {
     return result.parsedOutput;
   }
 
-  if (result.rawOutput.trim().length === 0) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(result.rawOutput) as unknown;
-
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
+  return parseStructuredJsonOutput(result.rawOutput);
 }
 
 function parseReviewIssues(value: unknown): ReviewIssue[] {
